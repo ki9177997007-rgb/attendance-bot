@@ -35,12 +35,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records[user_id] = {}
         records[user_id]["arrived"] = now
         records[user_id]["name"] = name
-
         await update.message.reply_text(
             f"✅ Отмечено! Ты пришёл в {now}",
             reply_markup=main_keyboard
         )
-
         await context.bot.send_message(
             chat_id=ADMIN_ID,
             text=f"📥 {name} пришёл в {now}"
@@ -51,12 +49,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records[user_id] = {}
         records[user_id]["left"] = now
         records[user_id]["name"] = name
-
         await update.message.reply_text(
             f"🏠 Отмечено! Ты ушёл в {now}",
             reply_markup=main_keyboard
         )
-
         await context.bot.send_message(
             chat_id=ADMIN_ID,
             text=f"📤 {name} ушёл в {now}"
