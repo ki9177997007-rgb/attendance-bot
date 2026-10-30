@@ -13,7 +13,7 @@ import java.util.*;
 
 public class RecorderService extends Service {
     public static volatile boolean running, stopping;
-    public static volatile String message = "Нажми ВКЛ. При первом запуске говори один: приложение запомнит твой голос. Для сброса образца удерживай ВКЛ.";
+    public static volatile String message = "Нажми ВКЛ. При первом запуске говори один: приложение запомнит твой голос. Для подключения и записей удерживай кнопку.";
     private volatile boolean cancelled;
     private Thread worker;
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -23,6 +23,7 @@ public class RecorderService extends Service {
     private File session;
     private String sessionId;
     private int chunks;
+    private long lastSync;
     @Override public IBinder onBind(Intent intent) { return null; }
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) { stopSelf(); return START_NOT_STICKY; }
@@ -93,6 +94,8 @@ public class RecorderService extends Service {
                     int length = microphone.read(buffer, 0, buffer.length);
                     if (length < 0) throw new IOException("Ошибка микрофона: " + length);
                     if (length == 0) continue;
+                    long now = SystemClock.elapsedRealtime();
+                    if (now - lastSync > 60000) { lastSync = now; SyncEngine.kick(this); }
                     wav.write(buffer, length);
                     if (recognizer.acceptWaveForm(buffer, length)) result(recognizer.getResult());
                     if (wav.size() >= 16000 * 2 * 300) { wav.close(); wav = nextWav(); }
@@ -112,8 +115,14 @@ public class RecorderService extends Service {
             if (wav != null) try { wav.close(); } catch (IOException e) {
                 failed = true; message = "Не удалось завершить аудиофайл: " + e.getMessage();
             }
+            String exported = "";
+            if (session != null) {
+                try { exported = " " + ExportFiles.session(this, session); }
+                catch (IOException e) { exported = " Копия в Загрузках не создана; оригиналы доступны через меню записей."; }
+            }
+            SyncEngine.kick(this);
             if (!failed) message = "Выключено. Запись и текст сохранены на телефоне." +
-                (owner == null ? " Обучение голосу ещё не закончено." : " Образец голоса сохранён.");
+                (owner == null ? " Обучение голосу ещё не закончено." : " Образец голоса сохранён.") + exported;
             main.post(() -> { worker = null; running = false; stopping = false; stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(); });
         }
     }
@@ -155,6 +164,10 @@ public class RecorderService extends Service {
         String line = "[" + timestamp + "] [" + label + "] " + text + "\n";
         append(new File(session, "transcript.txt"), line);
         if (label.startsWith("ПРИОРИТЕТ")) append(new File(session, "priority.txt"), line);
+        if (!"ОБУЧЕНИЕ".equals(label)) {
+            try (TaskDb db = new TaskDb(this)) { db.offer(sessionId, text, label.startsWith("ПРИОРИТЕТ")); }
+            catch (RuntimeException e) { message = "Текст сохранён, но очередь задач недоступна: " + e.getMessage(); return; }
+        }
         message = prompt();
     }
     private void append(File file, String text) throws IOException {

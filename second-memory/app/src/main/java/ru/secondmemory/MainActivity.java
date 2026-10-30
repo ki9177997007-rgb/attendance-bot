@@ -2,6 +2,8 @@ package ru.secondmemory;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.provider.DocumentsContract;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.*;
@@ -17,7 +19,7 @@ public class MainActivity extends Activity {
         public void run() {
             toggle.setText(RecorderService.running ? "ВЫКЛ" : "ВКЛ");
             toggle.setEnabled(!RecorderService.stopping);
-            status.setText(RecorderService.message);
+            status.setText(RecorderService.message + "\n\n" + SyncEngine.status + "\nУдерживай кнопку: подключение и записи.");
             handler.postDelayed(this, 500);
         }
     };
@@ -44,12 +46,40 @@ public class MainActivity extends Activity {
             } else requestStart();
         });
         toggle.setOnLongClickListener(v -> {
-            if (RecorderService.running || RecorderService.stopping) return true;
-            if (getSharedPreferences("voice", MODE_PRIVATE).edit().clear().commit())
-                RecorderService.message = "Образец голоса сброшен. Нажми ВКЛ и говори один.";
+            new AlertDialog.Builder(this).setTitle("Вторая память")
+                .setItems(new String[]{"Подключить YouGile", "Открыть / поделиться записью", "Синхронизировать поручения", "Заново запомнить мой голос"}, (dialog, which) -> {
+                    if (which == 0) startActivity(new Intent(this, ConnectActivity.class));
+                    else if (which == 1) {
+                        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE);
+                        pick.putExtra(DocumentsContract.EXTRA_INITIAL_URI, DocumentsContract.buildDocumentUri(RecordingsProvider.AUTHORITY, "root"));
+                        startActivityForResult(pick, 10);
+                    } else if (which == 2) SyncEngine.kick(this);
+                    else if (RecorderService.running || RecorderService.stopping) Toast.makeText(this,"Сначала выключи запись",Toast.LENGTH_SHORT).show();
+                    else new AlertDialog.Builder(this).setMessage("Сбросить только образец голоса? Записи сохранятся.")
+                        .setPositiveButton("Сбросить",(d,w)->{
+                            getSharedPreferences("voice",MODE_PRIVATE).edit().clear().apply();
+                            RecorderService.message="Образец сброшен. Нажми ВКЛ и говори один.";
+                        }).setNegativeButton("Отмена",null).show();
+                }).show();
             return true;
         });
+        SyncJob.schedule(this);
+        SyncEngine.kick(this);
+        if (!getPreferences(MODE_PRIVATE).getBoolean("setupShown",false)) {
+            getPreferences(MODE_PRIVATE).edit().putBoolean("setupShown",true).apply();
+            startActivity(new Intent(this,ConnectActivity.class));
+        }
     }
+    @Override protected void onActivityResult(int request,int result,Intent data) {
+        super.onActivityResult(request,result,data);
+        if(request==10 && result==RESULT_OK && data!=null && data.getData()!=null) {
+            Intent share=new Intent(Intent.ACTION_SEND).setType(getContentResolver().getType(data.getData()));
+            share.putExtra(Intent.EXTRA_STREAM,data.getData());share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            share.setClipData(android.content.ClipData.newRawUri("Запись",data.getData()));
+            startActivity(Intent.createChooser(share,"Открыть или передать запись"));
+        }
+    }
+
     private void requestStart() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 1);
