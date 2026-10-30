@@ -9,7 +9,7 @@ import java.util.Arrays;
 
 /** Read-only SAF surface; never exposes credentials, voice profiles or raw speaker vectors. */
 public class RecordingsProvider extends DocumentsProvider {
-    static final String AUTHORITY="ru.secondmemory.recordings";
+    static final String AUTHORITY="ru.secondmemory.mobile.recordings";
     private static final String[] DOC={Document.COLUMN_DOCUMENT_ID,Document.COLUMN_DISPLAY_NAME,Document.COLUMN_MIME_TYPE,Document.COLUMN_FLAGS,Document.COLUMN_SIZE,Document.COLUMN_LAST_MODIFIED};
     @Override public boolean onCreate(){return true;}
     private File base(){File f=new File(getContext().getFilesDir(),"sessions");f.mkdirs();return f;}
