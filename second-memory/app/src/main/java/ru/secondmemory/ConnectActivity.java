@@ -12,7 +12,7 @@ public class ConnectActivity extends Activity {
     private TextView status;
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
-        LinearLayout l=new LinearLayout(this);l.setOrientation(1);l.setPadding(36,48,36,36);
+        LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);l.setPadding(36,48,36,36);
         status=new TextView(this);status.setText("Подключение YouGile\n\nВход напрямую в YouGile, без Supabase. Будет создан отдельный проект «Вторая память». Передаются только черновики поручений; аудио и полная расшифровка остаются на телефоне. Пароль не сохраняется.");l.addView(status);
         login=new EditText(this);login.setHint("Логин YouGile");login.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);l.addView(login);
         password=new EditText(this);password.setHint("Пароль YouGile");password.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);l.addView(password);
