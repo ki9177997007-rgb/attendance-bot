@@ -1,0 +1,5 @@
+**/build/
+**/.gradle/
+**/local.properties
+second-memory/app/src/main/assets/*.zip
+**/__pycache__/
