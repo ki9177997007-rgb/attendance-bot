@@ -14,7 +14,7 @@ final class DueParser {
   for(int n=0;n<small.length;n++)s=s.replaceAll("\\b"+small[n]+"\\b",String.valueOf(n));return s;
  }
  static long parse(String text,long now,ZoneId zone) {
-  String s=numbers(text);ZonedDateTime base=Instant.ofEpochMilli(now).atZone(zone);
+  String s=numbers(text).replaceAll("через час\\b","через 1 час").replaceAll("через минуту\\b","через 1 минуту");ZonedDateTime base=Instant.ofEpochMilli(now).atZone(zone);
   if(s.contains("через полчаса"))return now+1800000L;
   Matcher delay=Pattern.compile("через (\\d{1,3}) (минут[уы]?|час(?:а|ов)?)\\b").matcher(s);
   if(delay.find()){

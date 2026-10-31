@@ -107,7 +107,10 @@ jobs:
           arch: x86_64
           disable-animations: true
           working-directory: second-memory
-          script: gradle --no-daemon -PtestAbi=x86_64 connectedDebugAndroidTest
+          script: |
+            gradle --no-daemon -PtestAbi=x86_64 connectedDebugAndroidTest
+            mkdir -p app/build/reports/androidTests/screenshots
+            adb pull /sdcard/Android/data/ru.secondmemory.mobile/files/. app/build/reports/androidTests/screenshots/
       - uses: actions/upload-artifact@v4
         if: always()
         with:

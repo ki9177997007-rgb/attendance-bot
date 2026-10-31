@@ -6,9 +6,10 @@ import java.time.*;
 import java.time.format.*;
 public class TasksActivity extends Activity {
  private LinearLayout list;
- @Override public void onCreate(Bundle b){super.onCreate(b);ScrollView scroll=new ScrollView(this);list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);list.setPadding(24,24,24,24);scroll.addView(list);setContentView(scroll);}
+ @Override public void onCreate(Bundle b){super.onCreate(b);ScrollView scroll=new ScrollView(this);list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);list.setPadding(24,24,24,24);scroll.addView(list);setContentView(scroll);ScreenLayout.apply(this,list);}
  @Override public void onResume(){super.onResume();refresh();}
  private void refresh(){list.removeAllViews();TextView title=new TextView(this);title.setText("Поручения · нажми для изменения");title.setTextSize(22);list.addView(title);
+  Button add=new Button(this);add.setText("Добавить напоминание");add.setOnClickListener(v->startActivity(new android.content.Intent(this,CommandsActivity.class)));list.addView(add);
   try(TaskDb db=new TaskDb(this)){for(TaskDb.Row row:db.all()){Button b=new Button(this);String due=row.due==0?"срок не задан":Instant.ofEpochMilli(row.due).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
    b.setText((row.completed?"✓ ГОТОВО":"○ ОТКРЫТО")+"\n"+row.text+"\n"+row.assignee+" · "+due);b.setOnClickListener(v->edit(row));list.addView(b);}}
  }

@@ -11,14 +11,14 @@ public class ConnectActivity extends Activity {
     private Button connect;
     private TextView status;
     @Override public void onCreate(Bundle b) {
-        super.onCreate(b);
+        super.onCreate(b);getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
         LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);l.setPadding(36,48,36,36);
-        status=new TextView(this);status.setText("Подключение YouGile\n\nВход напрямую в YouGile, без Supabase. Будет создан отдельный проект «Вторая память». Передаются только черновики поручений; аудио и полная расшифровка остаются на телефоне. Пароль не сохраняется.");l.addView(status);
+        status=new TextView(this);status.setText("Подключение YouGile\n\nВведи почту и пароль YouGile. Ключ будет получен автоматически — копировать его не нужно. Выбери свою компанию; отдельный проект «Вторая память» создаётся один раз.\n\nЕсли обычно входишь через Яндекс ID: здесь нужен пароль YouGile. Пароль Яндекса не вводи. Вход в установленное приложение не подключает синхронизацию автоматически.\n\nПередаются только поручения. Аудио и полная расшифровка остаются на телефоне. Пароль не сохраняется.");l.addView(status);
         login=new EditText(this);login.setHint("Логин YouGile");login.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);l.addView(login);
-        password=new EditText(this);password.setHint("Пароль YouGile");password.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);l.addView(password);
+        password=new EditText(this);password.setHint("Пароль YouGile");password.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);l.addView(password);password.setSaveEnabled(false);password.setImportantForAutofill(android.view.View.IMPORTANT_FOR_AUTOFILL_NO);
         connect=new Button(this);connect.setText("Войти и подключить");l.addView(connect);
         Button later=new Button(this);later.setText("Позже — работать офлайн");later.setOnClickListener(v->finish());l.addView(later);
-        ScrollView scroll=new ScrollView(this);scroll.addView(l);setContentView(scroll);
+        ScrollView scroll=new ScrollView(this);scroll.addView(l);setContentView(scroll);ScreenLayout.apply(this,l);
         connect.setOnClickListener(v->companies());
     }
     private void companies() {
@@ -28,7 +28,7 @@ public class ConnectActivity extends Activity {
         new Thread(()->{
             try {
                 JSONObject credentials=new JSONObject().put("login",user).put("password",pass);
-                JSONArray companies=new YouGileApi(null).call("POST","/api-v2/auth/companies?limit=1000",credentials).getJSONArray("content");
+                JSONArray companies=new YouGileAuth(new YouGileApi(null)).companies(user,pass);
                 if(companies.length()==0)throw new Exception("Компании не найдены");
                 runOnUiThread(()->choose(companies,credentials));
             } catch(Exception e){fail(e);}
@@ -52,9 +52,9 @@ public class ConnectActivity extends Activity {
                 String companyId=company.getString("id");
                 credentials.put("companyId",companyId);
                 String key;
-                try { key=new YouGileApi(null).call("POST","/api-v2/auth/keys",credentials).getString("key"); }
+                try { key=new YouGileAuth(new YouGileApi(null)).createKey(credentials.getString("login"),credentials.getString("password"),companyId); }
                 finally { credentials.remove("password"); }
-                JSONObject config=new YouGileApi(key).setup().put("company",companyId);
+                YouGileApi api=new YouGileApi(key);JSONObject who=api.call("GET","/api-v2/users/me",null);JSONObject config=api.setup().put("company",companyId).put("companyName",company.optString("name",company.optString("title",""))).put("accountName",who.optString("realName",who.optString("email","")));
                 SecureConfig.save(this,config);SyncJob.schedule(this);SyncEngine.kick(this);
                 runOnUiThread(()->{Toast.makeText(this,"YouGile подключён. Проект «Вторая память» готов.",Toast.LENGTH_LONG).show();finish();});
             }catch(Exception e){fail(e);}

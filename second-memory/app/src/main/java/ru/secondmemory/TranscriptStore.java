@@ -12,7 +12,8 @@ final class TranscriptStore {
   String time=new SimpleDateFormat("HH:mm:ss",Locale.US).format(new Date());
   data.remove("spk");data.remove("spk_frames");data.put("label","ВСЕ ГОЛОСА").put("priority",true).put("saved_at",time).put("recorded_at",System.currentTimeMillis());
   append(new File(session,"transcript.jsonl"),data.toString()+"\n");String line="["+time+"] "+text+"\n";append(new File(session,"transcript.txt"),line);
-  try(TaskDb db=new TaskDb(c)){db.offer(sessionId,text,true);}catch(RuntimeException e){append(new File(session,"task-errors.txt"),"Текст сохранён, ошибка очереди: "+e.getClass().getSimpleName()+"\n");}
+  CommandQueue.offer(c,text);
+  try(TaskDb db=new TaskDb(c)){if(!PhoneCommand.addressed(text))db.offer(sessionId,text,true);}catch(RuntimeException e){append(new File(session,"task-errors.txt"),"Текст сохранён, ошибка очереди: "+e.getClass().getSimpleName()+"\n");}
   String recent=c.getSharedPreferences("display",0).getString("recent","")+line;if(recent.length()>6000)recent=recent.substring(recent.length()-6000);c.getSharedPreferences("display",0).edit().putString("recent",recent).apply();
   ReminderReceiver.restore(c);return line;
  }

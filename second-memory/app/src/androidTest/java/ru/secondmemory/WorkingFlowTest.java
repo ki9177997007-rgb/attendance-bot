@@ -42,4 +42,35 @@ public class WorkingFlowTest {
   try(TaskDb db=new TaskDb(c)){boolean found=false;for(TaskDb.Row row:db.all())if(id.equals(row.session))found=true;assertTrue("No enrollment gate may discard a task",found);}
   assertFalse(c.getSharedPreferences("voice",0).contains("embedding"));
  }
+
+ @Test public void reminderActionsPersistAndCommandQueueDoesNotExecuteAudio()throws Exception{
+  Context c=inst.getTargetContext();String id;
+  try(TaskDb db=new TaskDb(c)){id=db.addReminder("Проверка напоминания",System.currentTimeMillis()+600000);}
+  new ReminderReceiver().onReceive(c,new Intent(c,ReminderReceiver.class).setAction("SNOOZE").putExtra("id",id));
+  try(TaskDb db=new TaskDb(c)){TaskDb.Row row=db.get(id);assertFalse(row.completed);assertFalse(row.notified);assertTrue(row.due>System.currentTimeMillis()+590000);}
+  new ReminderReceiver().onReceive(c,new Intent(c,ReminderReceiver.class).setAction("DONE").putExtra("id",id));
+  try(TaskDb db=new TaskDb(c)){assertTrue(db.get(id).completed);}
+  c.getSharedPreferences("commands",0).edit().clear().commit();
+  CommandQueue.offer(c,"Память таймер на десять минут");assertEquals(1,CommandQueue.read(c).length());
+  CommandQueue.offer(c,"Олег поставь будильник в шесть");assertEquals(1,CommandQueue.read(c).length());
+  JSONObject queued=CommandQueue.read(c).getJSONObject(0);CommandQueue.remove(c,queued.getString("text"),queued.getLong("at"));assertEquals(0,CommandQueue.read(c).length());
+ }
+ @Test public void phoneControlsScreenIsReachableAndDoesNotNeedNetwork(){
+  Context c=inst.getTargetContext();Activity activity=inst.startActivitySync(new Intent(c,CommandsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));inst.waitForIdleSync();
+  inst.runOnMainSync(()->{assertNotNull(button(activity.getWindow().getDecorView(),"Выполнить команду"));assertNotNull(button(activity.getWindow().getDecorView(),"Выбрать приложение"));activity.finish();});
+ }
+
+ @Test public void mainButtonIsReadableAtLargeFontAndScreenshots()throws Exception{
+  Context c=inst.getTargetContext();
+  try{
+   for(String scale:new String[]{"1.0","1.8"}){
+    try(android.os.ParcelFileDescriptor fd=inst.getUiAutomation().executeShellCommand("settings put system font_scale "+scale)){try(InputStream in=new android.os.ParcelFileDescriptor.AutoCloseInputStream(fd)){byte[] buf=new byte[256];while(in.read(buf)!=-1){}}}
+    Thread.sleep(1000);
+    Activity a=inst.startActivitySync(new Intent(c,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));inst.waitForIdleSync();Thread.sleep(800);
+    inst.runOnMainSync(()->{Button record=button(a.getWindow().getDecorView(),"ВКЛ · начать запись");assertNotNull(record);assertTrue(record.isShown());assertTrue("record button text must not be clipped",record.getHeight()>=record.getLayout().getHeight()+record.getCompoundPaddingTop()+record.getCompoundPaddingBottom());assertNotNull(button(a.getWindow().getDecorView(),"Настройки"));});
+    android.graphics.Bitmap image=inst.getUiAutomation().takeScreenshot();assertNotNull(image);File out=new File(c.getExternalFilesDir(null),"main-font-"+scale+".png");try(OutputStream stream=new FileOutputStream(out)){image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream);}image.recycle();
+    inst.runOnMainSync(a::finish);inst.waitForIdleSync();
+   }
+  }finally{try(android.os.ParcelFileDescriptor fd=inst.getUiAutomation().executeShellCommand("settings put system font_scale 1.0")){try(InputStream in=new android.os.ParcelFileDescriptor.AutoCloseInputStream(fd)){byte[] buf=new byte[256];while(in.read(buf)!=-1){}}}}
+ }
 }
