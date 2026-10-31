@@ -69,8 +69,15 @@ public class WorkingFlowTest {
     Activity a=inst.startActivitySync(new Intent(c,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));inst.waitForIdleSync();Thread.sleep(800);
     inst.runOnMainSync(()->{Button record=button(a.getWindow().getDecorView(),"ВКЛ · начать запись");assertNotNull(record);assertTrue(record.isShown());assertTrue("record button text must not be clipped",record.getHeight()>=record.getLayout().getHeight()+record.getCompoundPaddingTop()+record.getCompoundPaddingBottom());assertNotNull(button(a.getWindow().getDecorView(),"Настройки"));});
     android.graphics.Bitmap image=inst.getUiAutomation().takeScreenshot();assertNotNull(image);File out=new File(c.getExternalFilesDir(null),"main-font-"+scale+".png");try(OutputStream stream=new FileOutputStream(out)){image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream);}image.recycle();
+    try(android.os.ParcelFileDescriptor fd=inst.getUiAutomation().executeShellCommand("screencap -p /data/local/tmp/main-font-"+scale+".png")){try(InputStream in=new android.os.ParcelFileDescriptor.AutoCloseInputStream(fd)){byte[] buf=new byte[256];while(in.read(buf)!=-1){}}}
+
     inst.runOnMainSync(a::finish);inst.waitForIdleSync();
    }
   }finally{try(android.os.ParcelFileDescriptor fd=inst.getUiAutomation().executeShellCommand("settings put system font_scale 1.0")){try(InputStream in=new android.os.ParcelFileDescriptor.AutoCloseInputStream(fd)){byte[] buf=new byte[256];while(in.read(buf)!=-1){}}}}
+ }
+
+ @Test public void importingRecordingsPreservesSource()throws Exception{
+  Context c=inst.getTargetContext();String session="import-test-"+System.nanoTime();File dir=new File(c.getFilesDir(),"sessions/"+session);assertTrue(dir.mkdirs());File source=new File(dir,"transcript.txt");try(OutputStream out=new FileOutputStream(source)){out.write("Проверка импорта".getBytes(StandardCharsets.UTF_8));}
+  android.net.Uri uri=android.provider.DocumentsContract.buildDocumentUri(RecordingsProvider.AUTHORITY,session+"/transcript.txt");File copied=RecordingImport.copy(c,uri);assertTrue(copied.isFile());assertTrue(source.isFile());assertEquals(source.length(),copied.length());assertNotEquals(source.getCanonicalPath(),copied.getCanonicalPath());
  }
 }

@@ -110,7 +110,8 @@ jobs:
           script: |
             gradle --no-daemon -PtestAbi=x86_64 connectedDebugAndroidTest
             mkdir -p app/build/reports/androidTests/screenshots
-            adb pull /sdcard/Android/data/ru.secondmemory.assistant/files/. app/build/reports/androidTests/screenshots/
+            adb pull /data/local/tmp/main-font-1.0.png app/build/reports/androidTests/screenshots/
+            adb pull /data/local/tmp/main-font-1.8.png app/build/reports/androidTests/screenshots/
       - uses: actions/upload-artifact@v4
         if: always()
         with:
