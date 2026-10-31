@@ -17,10 +17,18 @@ final class DueParser {
   String s=numbers(text);ZonedDateTime base=Instant.ofEpochMilli(now).atZone(zone);
   if(s.contains("через полчаса"))return now+1800000L;
   Matcher delay=Pattern.compile("через (\\d{1,3}) (минут[уы]?|час(?:а|ов)?)\\b").matcher(s);
-  if(delay.find()){long n=Long.parseLong(delay.group(1));return n>0?now+n*(delay.group(2).startsWith("час")?3600000L:60000L):0;}
+  if(delay.find()){
+   long n=Long.parseLong(delay.group(1));if(n==0)return 0;long duration=n*(delay.group(2).startsWith("час")?3600000L:60000L);
+   if(delay.group(2).startsWith("час")){Matcher extra=Pattern.compile("^ (\\d{1,2}) минут[уы]?\\b").matcher(s.substring(delay.end()));if(extra.find()){int minutes=Integer.parseInt(extra.group(1));if(minutes>59)return 0;duration+=minutes*60000L;}}
+   return now+duration;
+  }
   Matcher time=Pattern.compile("(?:в|к) (\\d{1,2})(?: (\\d{2}))?(?: час(?:а|ов|ам)?)?(?:$| )").matcher(s);
-  if(!time.find())return 0;
-  int h=Integer.parseInt(time.group(1)),m=time.group(2)==null?0:Integer.parseInt(time.group(2));
+  int h=-1,m=0;
+  while(time.find()){
+   if(s.substring(time.end()).matches("^(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря).*"))continue;
+   h=Integer.parseInt(time.group(1));m=time.group(2)==null?0:Integer.parseInt(time.group(2));break;
+  }
+  if(h<0)return 0;
   if((s.contains("вечера")||s.contains("дня"))&&h<12)h+=12;
   if(s.contains("ночи")&&h==12)h=0;
   if(h>23||m>59)return 0;
@@ -28,7 +36,7 @@ final class DueParser {
   String[] days={"понедельник","вторник","среду","четверг","пятницу","субботу","воскресенье"};
   String[] months={"января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"};
   if(s.contains("послезавтра"))date=date.plusDays(2);else if(s.contains("завтра"))date=date.plusDays(1);
-  else for(int d=0;d<days.length;d++)if(s.contains(days[d])){int delta=(d+1-date.getDayOfWeek().getValue()+7)%7;if(delta==0)delta=7;date=date.plusDays(delta);break;}
+  else for(int d=0;d<days.length;d++)if(s.contains(days[d])){int delta=(d+1-date.getDayOfWeek().getValue()+7)%7;if(delta==0&&(s.contains("следующ")||!date.atTime(h,m).atZone(zone).isAfter(base)))delta=7;date=date.plusDays(delta);break;}
   for(int month=0;month<months.length;month++)if(s.contains(months[month])){
    Matcher md=Pattern.compile("(\\d{1,2}) "+months[month]+"(?: (20\\d{2}))?").matcher(s);
    if(!md.find())return 0;
