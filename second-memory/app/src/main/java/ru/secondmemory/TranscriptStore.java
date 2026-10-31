@@ -16,7 +16,7 @@ final class TranscriptStore {
   CommandQueue.offer(c,text,recorded);
   try(TaskDb db=new TaskDb(c)){if(!PhoneCommand.addressed(text))db.offer(sessionId,text,true,recorded);}catch(RuntimeException e){append(new File(session,"task-errors.txt"),"Текст сохранён, ошибка очереди: "+e.getClass().getSimpleName()+"\n");}
   String recent=c.getSharedPreferences("display",0).getString("recent","")+line;if(recent.length()>6000)recent=recent.substring(recent.length()-6000);c.getSharedPreferences("display",0).edit().putString("recent",recent).apply();
-  ReminderReceiver.restore(c);return line;
+  ReminderReceiver.restore(c);AiJob.schedule(c);return line;
  }
  private static void append(File f,String text)throws IOException{try(FileOutputStream out=new FileOutputStream(f,true)){out.write(text.getBytes(StandardCharsets.UTF_8));out.getFD().sync();}}
 }

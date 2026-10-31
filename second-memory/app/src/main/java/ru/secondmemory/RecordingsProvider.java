@@ -27,7 +27,7 @@ public class RecordingsProvider extends DocumentsProvider {
         for(String col:cols) {
             Object value=null;
             if(col.equals(Root.COLUMN_ROOT_ID)||col.equals(Root.COLUMN_DOCUMENT_ID))value="root";
-            else if(col.equals(Root.COLUMN_TITLE))value="Вторая память 0.8";
+            else if(col.equals(Root.COLUMN_TITLE))value="Вторая память 0.9";
             else if(col.equals(Root.COLUMN_FLAGS))value=Root.FLAG_LOCAL_ONLY;
             else if(col.equals(Root.COLUMN_MIME_TYPES))value="text/plain\naudio/wav";
             r.add(value);
@@ -40,7 +40,7 @@ public class RecordingsProvider extends DocumentsProvider {
         for(String col:cursor.getColumnNames()) {
             Object value=null;
             if(col.equals(Document.COLUMN_DOCUMENT_ID))value=id;
-            else if(col.equals(Document.COLUMN_DISPLAY_NAME))value=id.equals("root")?"Вторая память 0.8":file.getName();
+            else if(col.equals(Document.COLUMN_DISPLAY_NAME))value=id.equals("root")?"Вторая память 0.9":file.getName();
             else if(col.equals(Document.COLUMN_MIME_TYPE))value=file.isDirectory()?Document.MIME_TYPE_DIR:file.getName().endsWith(".wav")?"audio/wav":"text/plain";
             else if(col.equals(Document.COLUMN_SIZE))value=file.length();
             else if(col.equals(Document.COLUMN_FLAGS))value=0;

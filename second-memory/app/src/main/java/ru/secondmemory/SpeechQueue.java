@@ -18,7 +18,7 @@ final class SpeechQueue implements AutoCloseable {
   try(FileOutputStream out=new FileOutputStream(temp)){byte[] pcm=new byte[samples.length*2];for(int n=0;n<samples.length;n++){int v=Math.max(-32768,Math.min(32767,Math.round(samples[n]*32768f)));pcm[2*n]=(byte)v;pcm[2*n+1]=(byte)(v>>8);}out.write(pcm);out.getFD().sync();}
   if(!temp.renameTo(file))throw new IOException("Не удалось сохранить речевой фрагмент");submit(file);
  }
- private void submit(File file){pending.incrementAndGet();executor.submit(()->{try{
+ private void submit(File file){pending.incrementAndGet();RecorderService.speechPending=pending.get();AiJob.pauseForSpeech();executor.submit(()->{try{
    if(file.length()>16000*2*30L)throw new IOException("Слишком длинный фрагмент. Оригинальное аудио сохранено.");
    byte[] bytes;try(InputStream in=new FileInputStream(file);ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);bytes=out.toByteArray();}
    long started=System.currentTimeMillis();String text=speech.transcribe(NeuralSpeech.samples(bytes,bytes.length));

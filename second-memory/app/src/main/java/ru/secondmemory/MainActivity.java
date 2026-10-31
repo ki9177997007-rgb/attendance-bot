@@ -32,6 +32,7 @@ public class MainActivity extends Activity {
   page.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(dp(16)+insets.getSystemWindowInsetLeft(),dp(8)+insets.getSystemWindowInsetTop(),dp(16)+insets.getSystemWindowInsetRight(),dp(8)+insets.getSystemWindowInsetBottom());return insets.consumeSystemWindowInsets();});
   TextView title=text("Вторая память",22,Color.rgb(20,31,51));title.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));page.addView(title);
   Button settings=new Button(this);settings.setText("Настройки");settings.setTextSize(14);settings.setAllCaps(false);settings.setMinHeight(dp(48));settings.setOnClickListener(v->startActivity(new Intent(this,SettingsActivity.class)));page.addView(settings,new LinearLayout.LayoutParams(-1,-2));
+  Button analysis=new Button(this);analysis.setText("Анализ разговоров");analysis.setTextSize(14);analysis.setAllCaps(false);analysis.setMinHeight(dp(48));analysis.setOnClickListener(v->startActivity(new Intent(this,AnalysisActivity.class)));page.addView(analysis,new LinearLayout.LayoutParams(-1,-2));
   historyScroll=new ScrollView(this);historyScroll.setFillViewport(true);historyScroll.setBackground(background(Color.WHITE));
   LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(14),dp(12),dp(14),dp(16));historyScroll.addView(content);
   state=text("",13,Color.rgb(71,85,105));content.addView(state);
@@ -50,7 +51,6 @@ public class MainActivity extends Activity {
   if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED&&!getPreferences(MODE_PRIVATE).getBoolean("notificationAsked",false)){
    getPreferences(MODE_PRIVATE).edit().putBoolean("notificationAsked",true).apply();requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},2);return;
   }
-  getSystemService(android.app.job.JobScheduler.class).cancel(405);
   try{startForegroundService(new Intent(this,RecorderService.class).setAction("START"));}catch(RuntimeException e){RecorderService.message="Не удалось включить микрофон: "+e.getMessage();}
  }
  @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){super.onRequestPermissionsResult(request,permissions,results);if(request==2||(request==1&&results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED))requestStart();else RecorderService.message="Нет доступа к микрофону. Открой Настройки → Разрешения приложения.";}

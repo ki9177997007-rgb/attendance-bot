@@ -96,4 +96,13 @@ public class WorkingFlowTest {
   try(NeuralSpeech speech=new NeuralSpeech(c)){SpeechQueue queue=new SpeechQueue(c,speech);queue.offer(dir,NeuralSpeech.samples(pcm,pcm.length),System.currentTimeMillis());queue.close();assertEquals("",queue.error);assertEquals(0,queue.pending.get());}
   assertTrue(new File(dir,"transcript.txt").length()>0);assertEquals(0,dir.listFiles((d,n)->n.endsWith(".pending.pcm")).length);
  }
+
+ @Test public void fullAnalysisOverviewShowsNonTaskFactsAndSources()throws Exception{
+  Context c=inst.getTargetContext();String id="analysis-test-"+System.nanoTime();File dir=new File(c.getFilesDir(),"sessions/"+id);assertTrue(dir.mkdirs());
+  try(Writer out=new OutputStreamWriter(new FileOutputStream(new File(dir,"transcript.jsonl")),StandardCharsets.UTF_8)){out.write(new JSONObject().put("text","Решили заказать бумагу в понедельник.").put("saved_at","18:00:00").put("recorded_at",System.currentTimeMillis()).toString()+"\n");}
+  java.util.List<ConversationAnalysis.Line> lines=ConversationAnalysis.read(dir);JSONObject item=new JSONObject().put("kind","decision").put("text","Заказать бумагу в понедельник").put("owner","").put("line",1).put("quote","Решили заказать бумагу в понедельник");JSONArray points=ConversationAnalysis.parse(new JSONObject().put("items",new JSONArray().put(item)).toString(),lines);ConversationAnalysis.save(dir,new JSONObject().put("cursor",1).put("items",points));
+  Activity a=inst.startActivitySync(new Intent(c,AnalysisActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));inst.waitForIdleSync();java.util.concurrent.atomic.AtomicReference<Button> found=new java.util.concurrent.atomic.AtomicReference<>();
+  for(int i=0;i<20&&found.get()==null;i++){Thread.sleep(250);inst.runOnMainSync(()->found.set(button(a.getWindow().getDecorView(),"Источник: "+id+" · 18:00:00")));}
+  assertNotNull("Full-conversation decisions must be shown with a source button",found.get());inst.runOnMainSync(()->{assertNotNull(button(a.getWindow().getDecorView(),"Скопировать всю сводку"));assertNotNull(button(a.getWindow().getDecorView(),"Подготовить ИИ / начать анализ"));a.finish();});
+ }
 }

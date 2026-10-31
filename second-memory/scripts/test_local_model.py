@@ -17,3 +17,27 @@ for text,expected in [("Сергей, подготовь реестр завтр
   assert "реестр" in value["action"].lower()
   assert "Сергей" in value["assignee"]
 print("Real Qwen inference: PASS")
+
+# Exercise the new grammar using the exact production prompt prefix/suffix.
+import re
+java_source = pathlib.Path("app/src/main/java/ru/secondmemory/ConversationAnalysis.java").read_text()
+match = re.search(r'return\s+("(?:\\.|[^"\\])*")\s*\+source\+\s*("(?:\\.|[^"\\])*");', java_source)
+assert match, "Update the native fixture if the production prompt layout changes"
+source_lines = {
+    1: "В больнице закончилась бумага для принтера.",
+    2: "Решили заказать бумагу в понедельник.",
+    3: "Точный срок доставки пока неизвестен.",
+}
+prompt = json.loads(match[1]) + "\n".join(f"[{n} · 18:00:00] {text}" for n,text in source_lines.items()) + "\n" + json.loads(match[2])
+pathlib.Path("native-test/conversation-prompt.txt").write_text(prompt)
+result = subprocess.run(["native-test/memory_ai",str(path),"native-test/conversation-prompt.txt","--analysis"],capture_output=True,text=True,timeout=240)
+if result.returncode: raise RuntimeError(result.stderr[-6000:])
+value=json.loads(result.stdout.strip()); print("Full conversation analysis:",value,flush=True)
+assert 0 < len(value["items"]) <= 6
+assert any(point["kind"] in {"topic","fact","decision"} for point in value["items"]), "Non-task conversations must be analyzed too"
+assert any(point["kind"] == "decision" for point in value["items"]), "The explicit decision must appear in the overview"
+for point in value["items"]:
+    assert point["line"] in source_lines
+    assert len(point["quote"]) >= 6 and point["quote"] in source_lines[point["line"]], point
+    assert point["kind"] != "task", "A discussion or a decision is not a new assigned task"
+print("Real Qwen full-conversation inference and literal evidence: PASS")
