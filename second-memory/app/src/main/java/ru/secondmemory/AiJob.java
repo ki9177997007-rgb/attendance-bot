@@ -9,6 +9,7 @@ import java.util.*;
 
 public class AiJob extends JobService {
  private static final java.util.concurrent.atomic.AtomicBoolean active=new java.util.concurrent.atomic.AtomicBoolean();
+ static boolean isActive(){return active.get();}
  static volatile String status="";
  private volatile boolean stopped;
  private Thread worker;
@@ -16,7 +17,8 @@ public class AiJob extends JobService {
  @Override public boolean onStartJob(JobParameters p){
   stopped=false;worker=new Thread(()->{boolean more=false;
    if(!active.compareAndSet(false,true)){jobFinished(p,true);return;}
-   try{if(RecorderService.running||RecorderService.stopping){more=true;return;}if(!LocalModel.verify(this))return;
+   try{if(RecorderService.running||RecorderService.stopping){more=true;return;}LocalModel.importPending(this);if(!LocalModel.verify(this))return;
+    getSharedPreferences("ai",0).edit().remove("last_error").apply();
     File root=new File(getFilesDir(),"sessions");File[] dirs=root.listFiles(File::isDirectory);if(dirs==null)return;Arrays.sort(dirs,Comparator.comparing(File::getName));
     long start=System.currentTimeMillis();
     try(LocalAi ai=new LocalAi(LocalModel.file(this).getAbsolutePath());TaskDb db=new TaskDb(this)){
@@ -27,7 +29,7 @@ public class AiJob extends JobService {
         if(stopped||RecorderService.running||System.currentTimeMillis()-start>6*60000){more=true;return;}
         JSONObject o;try{o=new JSONObject(line);}catch(JSONException e){save(key,index);continue;}
         String text=o.optString("text","");
-        if(index>cursor&&!text.isEmpty()&&!"ОБУЧЕНИЕ".equals(o.optString("label"))){
+        if(index>cursor&&!text.isEmpty()){
          status="Разбираю запись "+key+", реплика "+index;
          long recorded=o.optLong("recorded_at",0);
          if(recorded==0)try{recorded=LocalDateTime.parse(key.substring(0,8)+" "+o.getString("saved_at"),java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss")).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();}catch(Exception e){recorded=transcript.lastModified();}
@@ -45,7 +47,7 @@ public class AiJob extends JobService {
      }
     }
     status="Локальный разбор завершён";ReminderReceiver.restore(this);SyncEngine.kick(this);
-   }catch(Exception|LinkageError e){status="Локальный ИИ: "+e.getMessage();}
+   }catch(Exception|LinkageError e){if(!stopped){status="Разбор текста остановлен: "+e.getMessage();getSharedPreferences("ai",0).edit().putString("last_error",status).apply();}}
    finally{active.set(false);if(!stopped)jobFinished(p,more);}
   },"local-ai");worker.start();return true;
  }

@@ -13,13 +13,13 @@ import java.util.*;
 
 public class RecorderService extends Service {
     public static volatile boolean running, stopping;
-    public static volatile String message = "Нажми ВКЛ. При первом запуске говори один: приложение запомнит твой голос. Для подключения и записей удерживай кнопку.";
+    public static volatile String message = "Готово к записи. Нажми ВКЛ.";
+    public static volatile String transcript="",partial="";
+    public static volatile int phraseCount,micLevel;
     private volatile boolean cancelled;
     private Thread worker;
     private final Handler main = new Handler(Looper.getMainLooper());
     private PowerManager.WakeLock wake;
-    private final SpeakerProfile enrollment = new SpeakerProfile();
-    private double[] owner;
     private File session;
     private String sessionId;
     private int chunks;
@@ -33,7 +33,8 @@ public class RecorderService extends Service {
             return START_NOT_STICKY;
         }
         if (running || stopping) return START_NOT_STICKY;
-        cancelled = false;
+        cancelled = false;partial="";phraseCount=0;micLevel=0;chunks=0;session=null;
+        transcript=getSharedPreferences("display",MODE_PRIVATE).getString("recent","");
         running = true;
         try {
             NotificationManager manager = getSystemService(NotificationManager.class);
@@ -47,7 +48,7 @@ public class RecorderService extends Service {
                 .addAction(android.R.drawable.ic_media_pause, "ВЫКЛ", stop).build());
             wake = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SecondMemory:recognition");
             wake.acquire();
-            message = "Подготавливаю офлайн-модели… При первом запуске это займёт некоторое время.";
+            message = "Открываю распознавание речи… При первом запуске распаковывается встроенная модель.";
             worker = new Thread(this::capture, "memory-capture");
             worker.start();
         } catch (Exception e) {
@@ -67,16 +68,12 @@ public class RecorderService extends Service {
         boolean failed = false;
         try {
             File modelPath = ModelAssets.unpack(this, "ru-small-0.22");
-            File speakerPath = ModelAssets.unpack(this, "speaker-0.4");
             if (cancelled) return;
-            String stored = getSharedPreferences("voice", MODE_PRIVATE).getString("embedding", null);
-            if (stored != null) owner = vector(new JSONArray(stored));
             sessionId = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(new Date());
             session = new File(getFilesDir(), "sessions/" + sessionId);
             if (!session.mkdirs()) throw new IOException("Не удалось создать запись");
             try (Model model = new Model(modelPath.getAbsolutePath());
-                 SpeakerModel speaker = new SpeakerModel(speakerPath.getAbsolutePath());
-                 Recognizer recognizer = new Recognizer(model, 16000, speaker)) {
+                 Recognizer recognizer = new Recognizer(model, 16000)) {
                 recognizer.setWords(true);
                 int minimum = AudioRecord.getMinBufferSize(16000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
                 if (minimum <= 0) throw new IOException("Микрофон не поддерживает запись 16 кГц");
@@ -88,8 +85,9 @@ public class RecorderService extends Service {
                 microphone.startRecording();
                 if (microphone.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) throw new IOException("Не удалось включить микрофон");
                 wav = nextWav();
-                message = prompt();
+                message = "Запись включена. Распознаю все голоса.";
                 byte[] buffer = new byte[6400];
+                long lastPartial=0;
                 while (!cancelled) {
                     int length = microphone.read(buffer, 0, buffer.length);
                     if (length < 0) throw new IOException("Ошибка микрофона: " + length);
@@ -97,7 +95,9 @@ public class RecorderService extends Service {
                     long now = SystemClock.elapsedRealtime();
                     if (now - lastSync > 60000) { lastSync = now; SyncEngine.kick(this); }
                     wav.write(buffer, length);
+                    long energy=0;for(int i=0;i+1<length;i+=2){int sample=(short)((buffer[i]&255)|(buffer[i+1]<<8));energy+=(long)sample*sample;}micLevel=Math.min(100,(int)(Math.sqrt(energy/(double)Math.max(1,length/2))/100));
                     if (recognizer.acceptWaveForm(buffer, length)) result(recognizer.getResult());
+                    else if(now-lastPartial>=500){partial=new JSONObject(recognizer.getPartialResult()).optString("partial","");lastPartial=now;}
                     if (wav.size() >= 16000 * 2 * 300) { wav.close(); wav = nextWav(); }
                 }
                 result(recognizer.getFinalResult());
@@ -121,61 +121,17 @@ public class RecorderService extends Service {
                 catch (IOException e) { exported = " Копия в Загрузках не создана; оригиналы доступны через меню записей."; }
             }
             SyncEngine.kick(this);
-            if (!failed) message = "Выключено. Запись и текст сохранены на телефоне." +
-                (owner == null ? " Обучение голосу ещё не закончено." : " Образец голоса сохранён.") + exported;
+            partial="";micLevel=0;
+            if (!failed) message = "Выключено. Сохранено фраз: "+phraseCount+". Запись сохранена на телефоне."+exported;
             main.post(() -> { worker = null; running = false; stopping = false; AiJob.schedule(this); ReminderReceiver.restore(this); stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(); });
         }
     }
     private WavWriter nextWav() throws IOException {
         return new WavWriter(new File(session, String.format(Locale.US, "audio_%03d.wav", ++chunks)));
     }
-    private String prompt() {
-        return owner == null ? "Запоминаю твой голос: " + enrollment.count() + "/3. Говори один. Произнеси три фразы по 5–10 секунд с паузами между ними."
-            : "Включено. Речь сохраняется офлайн. Похожие на твой голос реплики — приоритетные. Определение голоса может ошибаться.";
-    }
-    private static double[] vector(JSONArray values) throws JSONException {
-        double[] vector = new double[values.length()];
-        for (int i = 0; i < vector.length; i++) vector[i] = values.getDouble(i);
-        return vector;
-    }
     private void result(String raw) throws Exception {
-        JSONObject data = new JSONObject(raw);
-        String text = data.optString("text", "").trim();
-        if (text.isEmpty()) return;
-        double[] voice = data.has("spk") ? vector(data.getJSONArray("spk")) : null;
-        int frames = data.optInt("spk_frames", 0);
-        String label;
-        if (owner == null) {
-            label = "ОБУЧЕНИЕ";
-            enrollment.add(voice, frames);
-            if (enrollment.count() >= 3) {
-                owner = enrollment.vector();
-                JSONArray saved = new JSONArray();
-                for (double value : owner) saved.put(value);
-                if (!getSharedPreferences("voice", MODE_PRIVATE).edit().putString("embedding", saved.toString()).commit())
-                    throw new IOException("Не удалось сохранить образец голоса");
-            }
-        } else {
-            label = SpeakerProfile.probableOwner(owner, voice, frames) ? "ПРИОРИТЕТ: ПОХОЖ НА ТВОЙ ГОЛОС" : "ГОЛОС НЕ ПОДТВЕРЖДЁН";
-        }
-        String timestamp = new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date());
-        data.put("recorded_at",System.currentTimeMillis());
-        data.put("label", label).put("saved_at", timestamp).put("priority", label.startsWith("ПРИОРИТЕТ"));
-        append(new File(session, "transcript.jsonl"), data.toString() + "\n");
-        String line = "[" + timestamp + "] [" + label + "] " + text + "\n";
-        append(new File(session, "transcript.txt"), line);
-        if (label.startsWith("ПРИОРИТЕТ")) append(new File(session, "priority.txt"), line);
-        if (!"ОБУЧЕНИЕ".equals(label)) {
-            try (TaskDb db = new TaskDb(this)) { db.offer(sessionId, text, label.startsWith("ПРИОРИТЕТ")); ReminderReceiver.restore(this); }
-            catch (RuntimeException e) { message = "Текст сохранён, но очередь задач недоступна: " + e.getMessage(); return; }
-        }
-        message = prompt();
-    }
-    private void append(File file, String text) throws IOException {
-        try (FileOutputStream output = new FileOutputStream(file, true)) {
-            output.write(text.getBytes(StandardCharsets.UTF_8));
-            output.getFD().sync();
-        }
+        partial="";String line=TranscriptStore.save(this,session,sessionId,new JSONObject(raw));
+        if(!line.isEmpty()){phraseCount++;transcript=getSharedPreferences("display",MODE_PRIVATE).getString("recent","");message="Запись включена. Распознанный текст сохраняется.";}
     }
     @Override public void onDestroy() {
         requestStop();

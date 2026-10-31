@@ -10,7 +10,7 @@ public class TasksActivity extends Activity {
  @Override public void onResume(){super.onResume();refresh();}
  private void refresh(){list.removeAllViews();TextView title=new TextView(this);title.setText("Поручения · нажми для изменения");title.setTextSize(22);list.addView(title);
   try(TaskDb db=new TaskDb(this)){for(TaskDb.Row row:db.all()){Button b=new Button(this);String due=row.due==0?"срок не задан":Instant.ofEpochMilli(row.due).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
-   b.setText((row.completed?"✓ ГОТОВО":"○ ОТКРЫТО")+(row.priority?" · ТВОЙ ГОЛОС":" · ПРОВЕРИТЬ ГОЛОС")+"\n"+row.text+"\n"+row.assignee+" · "+due);b.setOnClickListener(v->edit(row));list.addView(b);}}
+   b.setText((row.completed?"✓ ГОТОВО":"○ ОТКРЫТО")+"\n"+row.text+"\n"+row.assignee+" · "+due);b.setOnClickListener(v->edit(row));list.addView(b);}}
  }
  private void edit(TaskDb.Row row){LinearLayout form=new LinearLayout(this);form.setOrientation(LinearLayout.VERTICAL);form.setPadding(24,8,24,8);EditText text=new EditText(this);text.setText(row.text);text.setHint("Поручение");form.addView(text);
   AutoCompleteTextView staff=new AutoCompleteTextView(this);staff.setHint("Исполнитель");staff.setText(row.assignee);staff.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_dropdown_item_1line,Staff.get(this).split("[,;\n]+")));form.addView(staff);

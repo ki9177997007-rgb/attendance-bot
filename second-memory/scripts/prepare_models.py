@@ -1,13 +1,13 @@
-"""Bundle upstream models once at build time; the app needs no network permission."""
+"""Bundle upstream models once at build time; speech recognition works without a network."""
 from pathlib import Path
 import urllib.request
 import zipfile
 
 assets = Path("app/src/main/assets")
 assets.mkdir(parents=True, exist_ok=True)
+(assets / "speaker-0.4.zip").unlink(missing_ok=True)
 for source, target, required in [
     ("vosk-model-small-ru-0.22", "ru-small-0.22", "am/final.mdl"),
-    ("vosk-model-spk-0.4", "speaker-0.4", "final.ext.raw"),
 ]:
     destination = assets / (target + ".zip")
     with urllib.request.urlopen("https://alphacephei.com/vosk/models/" + source + ".zip", timeout=120) as response:
