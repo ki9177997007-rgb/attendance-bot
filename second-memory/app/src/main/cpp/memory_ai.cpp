@@ -22,7 +22,7 @@ static Engine *open_model(const std::string &path){
  std::call_once(init_flag, []{llama_backend_init();});
  auto e=std::make_unique<Engine>();auto mp=llama_model_default_params();mp.n_gpu_layers=0;
  e->model=llama_model_load_from_file(path.c_str(),mp);if(!e->model)return nullptr;
- auto cp=llama_context_default_params();cp.n_ctx=4096;cp.n_batch=256;cp.n_ubatch=128;cp.n_threads=4;cp.n_threads_batch=4;
+ auto cp=llama_context_default_params();cp.n_ctx=4096;cp.n_batch=256;cp.n_ubatch=128;cp.n_threads=2;cp.n_threads_batch=2;
  cp.abort_callback=[](void*){return cancelled.load();};
  e->ctx=llama_init_from_model(e->model,cp);if(!e->ctx)return nullptr;return e.release();
 }
