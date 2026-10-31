@@ -65,7 +65,7 @@ jobs:
 
   android-device-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: second-memory
@@ -106,12 +106,14 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
+          ram-size: 3072
           working-directory: second-memory
           script: |
             gradle --no-daemon -PtestAbi=x86_64 connectedDebugAndroidTest
             mkdir -p app/build/reports/androidTests/screenshots
             adb pull /data/local/tmp/main-font-1.0.png app/build/reports/androidTests/screenshots/
             adb pull /data/local/tmp/main-font-1.8.png app/build/reports/androidTests/screenshots/
+            adb pull /data/local/tmp/speech-quality.txt app/build/reports/androidTests/
       - uses: actions/upload-artifact@v4
         if: always()
         with:

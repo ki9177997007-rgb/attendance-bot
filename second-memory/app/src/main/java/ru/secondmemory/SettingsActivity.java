@@ -9,9 +9,10 @@ import android.provider.*;
 import android.widget.*;
 
 public class SettingsActivity extends Activity {
- private LinearLayout page;private TextView modelStatus,yougileStatus,alarmStatus;
+ private LinearLayout page;private TextView modelStatus,yougileStatus,alarmStatus,speechStatus;
  private final Handler handler=new Handler(Looper.getMainLooper());
  private final Runnable refresh=new Runnable(){public void run(){
+  speechStatus.setText(NeuralSpeech.NAME+"\nМодель встроена в приложение. Дополнительно скачивать не нужно.\nФрагментов в обработке: "+RecorderService.speechPending+"\n"+getSharedPreferences("speech",0).getString("last_error",""));
   modelStatus.setText(LocalModel.status(SettingsActivity.this)+"\n"+getSharedPreferences("ai",0).getString("last_error","")+"\n"+AiJob.status);
   yougileStatus.setText(SyncEngine.status);
   boolean notifications=getSystemService(NotificationManager.class).areNotificationsEnabled();boolean exact=Build.VERSION.SDK_INT<31||getSystemService(AlarmManager.class).canScheduleExactAlarms();
@@ -21,8 +22,8 @@ public class SettingsActivity extends Activity {
  @Override public void onCreate(Bundle b){super.onCreate(b);ScrollView scroll=new ScrollView(this);page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);page.setPadding(24,24,24,24);scroll.addView(page);scroll.setFitsSystemWindows(true);setContentView(scroll);ScreenLayout.apply(this,page);
   heading("Настройки");button("Назад к записи",()->finish());
   heading("Управление телефоном");label("Будильники, таймеры, открытие приложений и напоминания. Во время записи обращайся: «Память, …». Действие выполняется после подтверждения в уведомлении или на экране команд.");button("Команды телефона",()->startActivity(new Intent(this,CommandsActivity.class)));
-  heading("Распознавание речи");label("Распознаются все голоса. Образец голоса не нужен. Запись и текст работают без Qwen и без YouGile.");button("Поручения и напоминания",()->startActivity(new Intent(this,TasksActivity.class)));button("Сотрудники",this::staff);button("Открыть / поделиться записью",this::records);button("Импорт записей из версии 06",this::importRecords);
-  heading("Локальная нейросеть");label("Qwen разбирает уже распознанный текст после остановки записи. Однократная загрузка 1,12 ГБ. Для обычной расшифровки она не нужна.");modelStatus=label("");
+  heading("Речевая нейросеть — GigaAM v3");speechStatus=label("");label("Распознаются все голоса. Текст появляется после паузы и обработки нейросетью. Исходное аудио сохраняется полностью. Qwen не распознаёт звук и для расшифровки не нужен.");button("Повторить распознавание сохранённых фрагментов",()->{if(RecorderService.running||RecorderService.stopping){Toast.makeText(this,"Сначала останови текущую запись и дождись обработки",Toast.LENGTH_LONG).show();return;}if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){Toast.makeText(this,"Сначала разреши микрофон, включив запись на главном экране",Toast.LENGTH_LONG).show();return;}getSharedPreferences("speech",0).edit().remove("last_error").apply();startForegroundService(new Intent(this,RecorderService.class).setAction("RETRY"));});button("Поручения и напоминания",()->startActivity(new Intent(this,TasksActivity.class)));button("Сотрудники",this::staff);button("Открыть / поделиться записью",this::records);button("Импорт записей из версии 06",this::importRecords);
+  heading("Нейросеть для поручений — Qwen");label("Qwen выделяет поручения из уже готовой расшифровки после остановки записи. Качество распознавания звука она не меняет. Однократная загрузка 1,12 ГБ. Для обычной расшифровки она не нужна.");modelStatus=label("");
   button("Скачать / повторить загрузку",this::downloadDialog);
   button("Проверить модель и запустить разбор",()->{getSharedPreferences("ai",0).edit().remove("last_error").apply();AiJob.schedule(this);Toast.makeText(this,"Проверка и разбор поставлены в очередь. Во время записи разбор ждёт остановки.",Toast.LENGTH_LONG).show();});
   button("Скачать модель через браузер",()->{try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(LocalModel.URL+"?download=true")));}catch(ActivityNotFoundException e){Toast.makeText(this,"Браузер не найден",Toast.LENGTH_LONG).show();}});

@@ -30,18 +30,25 @@ public class WorkingFlowTest {
  }
  @Test public void russianSpeechWorksWithoutSpeakerModelAndSavesTask()throws Exception{
   Context c=inst.getTargetContext();c.getSharedPreferences("voice",0).edit().clear().commit();
-  File model=ModelAssets.unpack(c,"ru-small-0.22");StringBuilder text=new StringBuilder();
-  try(Model m=new Model(model.getPath());Recognizer rec=new Recognizer(m,16000);InputStream in=inst.getContext().getAssets().open("test-speech.pcm")){
-   byte[] b=new byte[6400];int n;while((n=in.read(b))!=-1)if(rec.acceptWaveForm(b,n))text.append(new JSONObject(rec.getResult()).optString("text","")).append(' ');
-   text.append(new JSONObject(rec.getFinalResult()).optString("text",""));
-  }
-  assertTrue("Vosk must emit text without a speaker model",text.toString().trim().length()>3);
+  byte[] pcm;try(InputStream in=inst.getContext().getAssets().open("test-speech.pcm");ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);pcm=out.toByteArray();}
+  String text;try(NeuralSpeech speech=new NeuralSpeech(c)){text=speech.transcribe(NeuralSpeech.samples(pcm,pcm.length));}
+  assertTrue("GigaAM must emit Russian text without an extra download",text.trim().length()>3);
+  File model=ModelAssets.unpack(c,"ru-small-0.22");StringBuilder old=new StringBuilder();
+  try(Model m=new Model(model.getPath());Recognizer rec=new Recognizer(m,16000)){for(int p=0;p<pcm.length;p+=6400){int n=Math.min(6400,pcm.length-p);byte[] chunk=java.util.Arrays.copyOfRange(pcm,p,p+n);if(rec.acceptWaveForm(chunk,n))old.append(new JSONObject(rec.getResult()).optString("text","")).append(' ');}old.append(new JSONObject(rec.getFinalResult()).optString("text",""));}
+  String reference="нужно отправить документы завтра напомни позвонить в больницу проверка связи";
+  double before=wer(reference,old.toString()),after=wer(reference,text);
+  String report="Reference: "+reference+"\nVosk: "+old+"\nGigaAM v3: "+text+"\nVosk WER: "+before+"\nGigaAM WER: "+after+"\nSynthetic Russian fixture; not a guarantee for live conversations.\n";
+  android.util.Log.i("SpeechQuality",report);
+  try(OutputStream out=new FileOutputStream(new File(c.getFilesDir(),"speech-quality.txt"))){out.write(report.getBytes(StandardCharsets.UTF_8));}
+  try(android.os.ParcelFileDescriptor fd=inst.getUiAutomation().executeShellCommand("run-as "+c.getPackageName()+" cat files/speech-quality.txt > /data/local/tmp/speech-quality.txt")){try(InputStream in=new android.os.ParcelFileDescriptor.AutoCloseInputStream(fd)){byte[] buf=new byte[256];while(in.read(buf)!=-1){}}}
+  assertTrue("GigaAM must improve the old recognizer on the fixed fixture: "+report,after<before||after==0);
+  assertTrue("Too many errors on the clean fixture: "+report,after<=0.25);
   String id="instrumentation-"+System.nanoTime();File session=new File(c.getFilesDir(),"sessions/"+id);assertTrue(session.mkdirs());
-  TranscriptStore.save(c,session,id,new JSONObject().put("text",text.toString()));assertTrue(new File(session,"transcript.txt").length()>0);
-  TranscriptStore.save(c,session,id,new JSONObject().put("text","нужно отправить документы завтра"));
-  try(TaskDb db=new TaskDb(c)){boolean found=false;for(TaskDb.Row row:db.all())if(id.equals(row.session))found=true;assertTrue("No enrollment gate may discard a task",found);}
+  TranscriptStore.save(c,session,id,new JSONObject().put("text",text).put("engine","gigaam-v3"));assertTrue(new File(session,"transcript.txt").length()>0);
+  try(TaskDb db=new TaskDb(c)){boolean found=false;for(TaskDb.Row row:db.all())if(id.equals(row.session))found=true;assertTrue(found);}
   assertFalse(c.getSharedPreferences("voice",0).contains("embedding"));
  }
+ private double wer(String expected,String actual){String[] a=TaskRules.normalize(expected).split(" "),b=TaskRules.normalize(actual).split(" ");int[][] d=new int[a.length+1][b.length+1];for(int i=0;i<=a.length;i++)d[i][0]=i;for(int j=0;j<=b.length;j++)d[0][j]=j;for(int i=1;i<=a.length;i++)for(int j=1;j<=b.length;j++)d[i][j]=Math.min(Math.min(d[i-1][j]+1,d[i][j-1]+1),d[i-1][j-1]+(a[i-1].equals(b[j-1])?0:1));return d[a.length][b.length]/(double)a.length;}
 
  @Test public void reminderActionsPersistAndCommandQueueDoesNotExecuteAudio()throws Exception{
   Context c=inst.getTargetContext();String id;
@@ -79,5 +86,14 @@ public class WorkingFlowTest {
  @Test public void importingRecordingsPreservesSource()throws Exception{
   Context c=inst.getTargetContext();String session="import-test-"+System.nanoTime();File dir=new File(c.getFilesDir(),"sessions/"+session);assertTrue(dir.mkdirs());File source=new File(dir,"transcript.txt");try(OutputStream out=new FileOutputStream(source)){out.write("Проверка импорта".getBytes(StandardCharsets.UTF_8));}
   android.net.Uri uri=android.provider.DocumentsContract.buildDocumentUri(RecordingsProvider.AUTHORITY,session+"/transcript.txt");File copied=RecordingImport.copy(c,uri);assertTrue(copied.isFile());assertTrue(source.isFile());assertEquals(source.length(),copied.length());assertNotEquals(source.getCanonicalPath(),copied.getCanonicalPath());
+ }
+
+ @Test public void neuralVadProducesSegmentsAndQueueSavesResults()throws Exception{
+  Context c=inst.getTargetContext();byte[] pcm;try(InputStream in=inst.getContext().getAssets().open("test-speech.pcm");ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);pcm=out.toByteArray();}
+  com.k2fsa.sherpa.onnx.Vad vad=NeuralSpeech.detector(c);int segments=0;
+  try{for(int p=0;p<pcm.length;p+=1024){byte[] b=java.util.Arrays.copyOfRange(pcm,p,Math.min(p+1024,pcm.length));vad.acceptWaveform(NeuralSpeech.samples(b,b.length));}vad.flush();while(!vad.empty()){assertTrue(vad.front().getSamples().length>1000);segments++;vad.pop();}}finally{vad.release();}assertTrue(segments>0);
+  String id="neural-queue-"+System.nanoTime();File dir=new File(c.getFilesDir(),"sessions/"+id);assertTrue(dir.mkdirs());
+  try(NeuralSpeech speech=new NeuralSpeech(c)){SpeechQueue queue=new SpeechQueue(c,speech);queue.offer(dir,NeuralSpeech.samples(pcm,pcm.length),System.currentTimeMillis());queue.close();assertEquals("",queue.error);assertEquals(0,queue.pending.get());}
+  assertTrue(new File(dir,"transcript.txt").length()>0);assertEquals(0,dir.listFiles((d,n)->n.endsWith(".pending.pcm")).length);
  }
 }

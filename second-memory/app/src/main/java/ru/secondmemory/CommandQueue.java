@@ -6,12 +6,13 @@ import org.json.*;
 
 /** Recognition only queues actions; it never launches another app from the background. */
 final class CommandQueue {
- static synchronized void offer(Context c,String text){
-  if(!PhoneCommand.addressed(text))return;
+ static void offer(Context c,String text){offer(c,text,System.currentTimeMillis());}
+ static synchronized void offer(Context c,String text,long recorded){
+  if(!PhoneCommand.addressed(text)||System.currentTimeMillis()-recorded>120000)return;
   try{
-   PhoneCommand command=PhoneCommand.parse(text,System.currentTimeMillis(),ZoneId.systemDefault());
-   JSONArray list=read(c);if(list.length()>=30)return;
-   list.put(new JSONObject().put("text",text).put("at",System.currentTimeMillis()));write(c,list);
+   PhoneCommand command=PhoneCommand.parse(text,recorded,ZoneId.systemDefault());
+   JSONArray list=read(c);if(list.length()>=30)return;for(int n=0;n<list.length();n++){JSONObject o=list.optJSONObject(n);if(o!=null&&text.equals(o.optString("text"))&&recorded==o.optLong("at"))return;}
+   list.put(new JSONObject().put("text",text).put("at",recorded));write(c,list);
    NotificationManager nm=c.getSystemService(NotificationManager.class);nm.createNotificationChannel(new NotificationChannel("commands","Команды телефона",NotificationManager.IMPORTANCE_DEFAULT));
    PendingIntent open=PendingIntent.getActivity(c,14,new Intent(c,CommandsActivity.class),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
    if(nm.areNotificationsEnabled())nm.notify(14,new Notification.Builder(c,"commands").setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentTitle("Команда ждёт подтверждения").setContentText(command.summary()).setContentIntent(open).setAutoCancel(true).build());

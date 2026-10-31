@@ -19,11 +19,12 @@ final class TaskDb extends SQLiteOpenHelper {
  db.execSQL("ALTER TABLE tasks ADD COLUMN dirty INTEGER NOT NULL DEFAULT 0");
  } }
     String addReminder(String text,long due){String id=UUID.randomUUID().toString();ContentValues v=new ContentValues();v.put("id",id);v.put("session","manual");v.put("text",text);v.put("priority",1);v.put("created",System.currentTimeMillis());v.put("due",due);v.put("analyzed",1);getWritableDatabase().insertOrThrow("tasks",null,v);return id;}
-    void offer(String session, String text, boolean priority) {
+    void offer(String session,String text,boolean priority){offer(session,text,priority,System.currentTimeMillis());}
+    void offer(String session, String text, boolean priority,long recorded) {
         if (!TaskRules.candidate(text)) return;
         String id = UUID.nameUUIDFromBytes((session+"\n"+TaskRules.normalize(text)).getBytes(StandardCharsets.UTF_8)).toString();
         ContentValues v=new ContentValues();
-        v.put("id",id);v.put("session",session);v.put("text",text);v.put("priority",priority?1:0);v.put("created",System.currentTimeMillis());v.put("due",DueParser.parse(text,System.currentTimeMillis(),java.time.ZoneId.systemDefault()));
+        v.put("id",id);v.put("session",session);v.put("text",text);v.put("priority",priority?1:0);v.put("created",recorded);v.put("due",DueParser.parse(text,recorded,java.time.ZoneId.systemDefault()));
         getWritableDatabase().insertWithOnConflict("tasks",null,v,SQLiteDatabase.CONFLICT_IGNORE);
     }
     static final class Row {

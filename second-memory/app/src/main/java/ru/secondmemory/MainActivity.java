@@ -20,8 +20,8 @@ public class MainActivity extends Activity {
   toggle.setText(RecorderService.stopping?"Сохраняю…":RecorderService.running?"ВЫКЛ · остановить запись":"ВКЛ · начать запись");toggle.setEnabled(!RecorderService.stopping);
   toggle.setBackground(background(RecorderService.running?Color.rgb(166,42,45):Color.rgb(29,78,216)));
   String message=RecorderService.message;int export=message.indexOf(" Текст:");if(export>=0)message=message.substring(0,export);
-  state.setText((CommandQueue.read(MainActivity.this).length()>0?"Есть команды: открой Настройки → Команды телефона.\n":"")+message+(RecorderService.running?"\nМикрофон: "+RecorderService.micLevel+" / 100 · фраз: "+RecorderService.phraseCount:""));
-  live.setText(RecorderService.partial.isEmpty()?(RecorderService.running?"Слушаю… Сделай короткую паузу, чтобы сохранить фразу.":"Готово к записи. Все голоса, без обучения."):"Сейчас: "+RecorderService.partial);
+  state.setText((CommandQueue.read(MainActivity.this).length()>0?"Есть команды: открой Настройки → Команды телефона.\n":"")+message+(RecorderService.running?"\nМикрофон: "+RecorderService.micLevel+" / 100 · фраз: "+RecorderService.phraseCount+" · в обработке: "+RecorderService.speechPending:""));
+  live.setText(RecorderService.partial.isEmpty()?(RecorderService.running?"Слушаю… Сделай короткую паузу, чтобы сохранить фразу.":"GigaAM v3 · речь распознаётся на телефоне."):RecorderService.partial);
   String value=RecorderService.transcript;if(value.isEmpty())value=getSharedPreferences("display",MODE_PRIVATE).getString("recent","");
   String shown=value.isEmpty()?"Распознанные фразы появятся здесь.\nЗаписи и поручения доступны в настройках.":value;
   if(!shown.contentEquals(history.getText())){boolean bottom=historyScroll.getChildAt(0).getBottom()-historyScroll.getScrollY()-historyScroll.getHeight()<dp(80);history.setText(shown);if(bottom&&RecorderService.running)historyScroll.post(()->historyScroll.fullScroll(View.FOCUS_DOWN));}handler.postDelayed(this,600);
