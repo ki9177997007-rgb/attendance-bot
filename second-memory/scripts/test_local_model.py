@@ -68,7 +68,8 @@ for question,should_answer in [("Что говорили о пособии?",Tru
  if result.returncode:raise RuntimeError(result.stderr[-6000:])
  value=json.loads(result.stdout.strip());print("Recall answer:",question,value,flush=True)
  if should_answer:
-  assert value["items"], value
+  assert len(value["items"])==1, value
+  assert value["items"][0]["text"]=="Пособие пока не поступило на счёт.",value
   assert all(point["line"]==1 and point["kind"]=="fact" for point in value["items"]),value
  else:assert not value["items"], "An unknown name must not be invented"
 print("Real Qwen source-grounded recall answers: PASS")
