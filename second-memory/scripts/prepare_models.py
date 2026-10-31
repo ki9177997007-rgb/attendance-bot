@@ -62,3 +62,5 @@ with ThreadPoolExecutor(max_workers=4) as pool:
     list(pool.map(fetch_verified, files))
 
 (assets / "speech/engine.txt").write_text("GigaAM v3 RNN-T, int8; Russian; local inference\nModel: " + revision + "\nRuntime: sherpa-onnx 2.0.1\n", encoding="utf-8")
+
+(assets / "speech/NOTICE.txt").write_text(Path("SPEECH-NOTICES.txt").read_text(encoding="utf-8"), encoding="utf-8")

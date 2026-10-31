@@ -11,7 +11,7 @@ final class SpeechQueue implements AutoCloseable {
  private final Context context;private final NeuralSpeech speech;private final ExecutorService executor=Executors.newSingleThreadExecutor();
  final AtomicInteger pending=new AtomicInteger();final Set<File> touched=Collections.synchronizedSet(new HashSet<>());
  volatile String error="";
- SpeechQueue(Context c,NeuralSpeech speech){context=c;speech=speech;}
+ SpeechQueue(Context c,NeuralSpeech speech){context=c;this.speech=speech;}
  void recover(){File root=new File(context.getFilesDir(),"sessions");File[] dirs=root.listFiles(File::isDirectory);if(dirs==null)return;Arrays.sort(dirs,Comparator.comparing(File::getName));for(File dir:dirs){File[] files=dir.listFiles((d,n)->n.endsWith(".pending.pcm"));if(files==null)continue;Arrays.sort(files,Comparator.comparing(File::getName));for(File f:files)submit(f);}}
  void offer(File session,float[] samples,long recorded)throws IOException{
   File file=new File(session,"speech_"+recorded+"_"+UUID.randomUUID()+".pending.pcm"),temp=new File(file.getPath()+".tmp");
