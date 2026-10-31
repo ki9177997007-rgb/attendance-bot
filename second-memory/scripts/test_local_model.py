@@ -60,13 +60,20 @@ print("Real Qwen memory query expansion: PASS")
 
 match=re.search(r'return\s+("(?:\\.|[^"\\])*")\s*\+source\+\s*("(?:\\.|[^"\\])*");',search_java)
 assert match, "Production recall answer prompt not found"
+# Validate the model's answer through the actual Android-independent Java guard.
+json_jar=pathlib.Path("native-test/json.jar")
+urllib.request.urlretrieve("https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.jar",json_jar)
+java_sources=["app/src/main/java/ru/secondmemory/"+name+".java" for name in ["ConversationAnalysis","MemorySearch","RecallWindow"]]
+subprocess.run(["javac","-cp",str(json_jar),"-d","native-test/recall-java",*java_sources,"scripts/RecallValidationCli.java"],check=True)
 for question,should_answer in [("Что говорили о пособии?",True),("Как зовут врача?",False)]:
  source="Что нужно вспомнить:\n"+question+"\nНайденные реплики:\n[1] Пособие пока не поступило на счёт.\n[2] Завтра ожидается доставка стульев.\n"
  prompt=json.loads(match[1])+source+json.loads(match[2])
  pathlib.Path("native-test/recall-answer.txt").write_text(prompt)
  result=subprocess.run(["native-test/memory_ai",str(path),"native-test/recall-answer.txt","--analysis"],capture_output=True,text=True,timeout=180)
  if result.returncode:raise RuntimeError(result.stderr[-6000:])
- value=json.loads(result.stdout.strip());print("Recall answer:",question,value,flush=True)
+ pathlib.Path("native-test/answer.json").write_text(result.stdout)
+ checked=subprocess.run(["java","-cp",str(json_jar)+":native-test/recall-java","ru.secondmemory.RecallValidationCli",question,"native-test/answer.json"],capture_output=True,text=True,check=True)
+ value={"items":json.loads(checked.stdout)};print("Validated recall answer:",question,value,flush=True)
  if should_answer:
   assert len(value["items"])==1, value
   assert value["items"][0]["text"]=="Пособие пока не поступило на счёт.",value
