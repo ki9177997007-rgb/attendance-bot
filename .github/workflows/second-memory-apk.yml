@@ -110,7 +110,7 @@ jobs:
           script: |
             gradle --no-daemon -PtestAbi=x86_64 connectedDebugAndroidTest
             mkdir -p app/build/reports/androidTests/screenshots
-            adb pull /sdcard/Android/data/ru.secondmemory.mobile/files/. app/build/reports/androidTests/screenshots/
+            adb pull /sdcard/Android/data/ru.secondmemory.assistant/files/. app/build/reports/androidTests/screenshots/
       - uses: actions/upload-artifact@v4
         if: always()
         with:

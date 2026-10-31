@@ -9,7 +9,7 @@ import java.util.Arrays;
 
 /** Read-only SAF surface; never exposes credentials, voice profiles or raw speaker vectors. */
 public class RecordingsProvider extends DocumentsProvider {
-    static final String AUTHORITY="ru.secondmemory.mobile.recordings";
+    static final String AUTHORITY=BuildConfig.APPLICATION_ID+".recordings";
     private static final String[] DOC={Document.COLUMN_DOCUMENT_ID,Document.COLUMN_DISPLAY_NAME,Document.COLUMN_MIME_TYPE,Document.COLUMN_FLAGS,Document.COLUMN_SIZE,Document.COLUMN_LAST_MODIFIED};
     @Override public boolean onCreate(){return true;}
     private File base(){File f=new File(getContext().getFilesDir(),"sessions");f.mkdirs();return f;}
@@ -27,7 +27,7 @@ public class RecordingsProvider extends DocumentsProvider {
         for(String col:cols) {
             Object value=null;
             if(col.equals(Root.COLUMN_ROOT_ID)||col.equals(Root.COLUMN_DOCUMENT_ID))value="root";
-            else if(col.equals(Root.COLUMN_TITLE))value="Вторая память";
+            else if(col.equals(Root.COLUMN_TITLE))value="Вторая память 0.7";
             else if(col.equals(Root.COLUMN_FLAGS))value=Root.FLAG_LOCAL_ONLY;
             else if(col.equals(Root.COLUMN_MIME_TYPES))value="text/plain\naudio/wav";
             r.add(value);
@@ -40,7 +40,7 @@ public class RecordingsProvider extends DocumentsProvider {
         for(String col:cursor.getColumnNames()) {
             Object value=null;
             if(col.equals(Document.COLUMN_DOCUMENT_ID))value=id;
-            else if(col.equals(Document.COLUMN_DISPLAY_NAME))value=id.equals("root")?"Вторая память":file.getName();
+            else if(col.equals(Document.COLUMN_DISPLAY_NAME))value=id.equals("root")?"Вторая память 0.7":file.getName();
             else if(col.equals(Document.COLUMN_MIME_TYPE))value=file.isDirectory()?Document.MIME_TYPE_DIR:file.getName().endsWith(".wav")?"audio/wav":"text/plain";
             else if(col.equals(Document.COLUMN_SIZE))value=file.length();
             else if(col.equals(Document.COLUMN_FLAGS))value=0;

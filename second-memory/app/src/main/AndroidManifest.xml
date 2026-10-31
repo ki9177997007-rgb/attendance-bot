@@ -21,7 +21,7 @@
 <service android:name=".AiJob" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true"/>
 <activity android:name=".ConnectActivity" android:exported="false"/>
 <service android:name=".SyncJob" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true"/>
-<provider android:name=".RecordingsProvider" android:authorities="ru.secondmemory.mobile.recordings" android:exported="true" android:grantUriPermissions="true" android:permission="android.permission.MANAGE_DOCUMENTS">
+<provider android:name=".RecordingsProvider" android:authorities="${applicationId}.recordings" android:exported="true" android:grantUriPermissions="true" android:permission="android.permission.MANAGE_DOCUMENTS">
 <intent-filter><action android:name="android.content.action.DOCUMENTS_PROVIDER"/></intent-filter>
 </provider>
 </application></manifest>
