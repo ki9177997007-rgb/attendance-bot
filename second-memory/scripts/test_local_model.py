@@ -42,3 +42,33 @@ for point in value["items"]:
     assert len(source_lines[point["line"]]) >= 6 # literal evidence is attached by the app, not generated
     assert point["kind"] != "task", "A discussion or a decision is not a new assigned task"
 print("Real Qwen full-conversation inference and literal evidence: PASS")
+
+# Semantic query expansion uses the same production prompt and native grammar as Android.
+search_java=pathlib.Path("app/src/main/java/ru/secondmemory/MemorySearch.java").read_text()
+match=re.search(r'return\s+("(?:\\.|[^"\\])*")\s*\+query\+\s*("(?:\\.|[^"\\])*");',search_java)
+assert match, "Production search prompt not found"
+query="Где говорили, что деньги ещё не перечислили?"
+prompt=json.loads(match[1])+query+json.loads(match[2])
+pathlib.Path("native-test/search-prompt.txt").write_text(prompt)
+result=subprocess.run(["native-test/memory_ai",str(path),"native-test/search-prompt.txt","--search"],capture_output=True,text=True,timeout=180)
+if result.returncode:raise RuntimeError(result.stderr[-6000:])
+value=json.loads(result.stdout.strip());print("Semantic memory search terms:",value,flush=True)
+assert 1<=len(value["terms"])<=12
+assert any(re.search("выплат|перечисл|поступ|сч[её]т|ден",term,re.I) for term in value["terms"])
+assert all(isinstance(term,str) and 0<len(term)<=80 for term in value["terms"])
+print("Real Qwen memory query expansion: PASS")
+
+match=re.search(r'return\s+("(?:\\.|[^"\\])*")\s*\+source\+\s*("(?:\\.|[^"\\])*");',search_java)
+assert match, "Production recall answer prompt not found"
+for question,should_answer in [("Что говорили о пособии?",True),("Как зовут врача?",False)]:
+ source="Что нужно вспомнить:\n"+question+"\nНайденные реплики:\n[1] Пособие пока не поступило на счёт.\n[2] Завтра ожидается доставка стульев.\n"
+ prompt=json.loads(match[1])+source+json.loads(match[2])
+ pathlib.Path("native-test/recall-answer.txt").write_text(prompt)
+ result=subprocess.run(["native-test/memory_ai",str(path),"native-test/recall-answer.txt","--analysis"],capture_output=True,text=True,timeout=180)
+ if result.returncode:raise RuntimeError(result.stderr[-6000:])
+ value=json.loads(result.stdout.strip());print("Recall answer:",question,value,flush=True)
+ if should_answer:
+  assert value["items"], value
+  assert all(point["line"]==1 and point["kind"]=="fact" for point in value["items"]),value
+ else:assert not value["items"], "An unknown name must not be invented"
+print("Real Qwen source-grounded recall answers: PASS")

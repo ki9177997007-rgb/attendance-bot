@@ -26,12 +26,12 @@ static Engine *open_model(const std::string &path){
  cp.abort_callback=[](void*){return cancelled.load();};
  e->ctx=llama_init_from_model(e->model,cp);if(!e->ctx)return nullptr;return e.release();
 }
-static std::string run(Engine *e,const std::string &prompt,bool analysis=false){
+static std::string run(Engine *e,const std::string &prompt,bool analysis=false,bool search=false){
  if(!e||!e->ctx)throw std::runtime_error("No model");
  cancelled=false;llama_kv_cache_clear(e->ctx);
  const auto *vocab=llama_model_get_vocab(e->model);
  int n=-llama_tokenize(vocab,prompt.data(),prompt.size(),nullptr,0,true,true);
- if(n<=0||n>(analysis?2400:3500))throw std::runtime_error("Prompt too long");
+ if(n<=0||n>((analysis||search)?2400:3500))throw std::runtime_error("Prompt too long");
  std::vector<llama_token> tokens(n);
  n=llama_tokenize(vocab,prompt.data(),prompt.size(),tokens.data(),tokens.size(),true,true);
  for(int offset=0;offset<n;offset+=256){if(cancelled)throw std::runtime_error("Cancelled");auto batch=llama_batch_get_one(tokens.data()+offset,std::min(256,n-offset));if(llama_decode(e->ctx,batch))throw std::runtime_error("Decode failed");}
@@ -47,10 +47,14 @@ num ::= [1-9] [0-9]*
 str ::= "\"" ([^"\\\x00-\x1F] | "\\" ["\\/bfnrt])* "\""
 ws ::= [ \t\n\r]*
 )GRAM";
- auto *constraint=llama_sampler_init_grammar(vocab,analysis?analysis_grammar:grammar,"root");if(!constraint)throw std::runtime_error("Invalid grammar");
+ const char *search_grammar=R"GRAM(root ::= "{" ws "\"terms\":" ws "[" ws str (ws "," ws str)* ws "]" ws "}"
+str ::= "\"" ([^"\\\x00-\x1F] | "\\" ["\\/bfnrt])* "\""
+ws ::= [ \t\n\r]*
+)GRAM";
+ auto *constraint=llama_sampler_init_grammar(vocab,search?search_grammar:analysis?analysis_grammar:grammar,"root");if(!constraint)throw std::runtime_error("Invalid grammar");
  llama_sampler_chain_add(sampler.get(),constraint);llama_sampler_chain_add(sampler.get(),llama_sampler_init_greedy());
  std::string result;
- for(int i=0;i<(analysis?1536:384);i++){
+ for(int i=0;i<(search?384:analysis?1536:384);i++){
   if(cancelled)throw std::runtime_error("Cancelled");
   llama_token t=llama_sampler_sample(sampler.get(),e->ctx,-1);if(llama_vocab_is_eog(vocab,t))return result;
   char buf[512];int size=llama_token_to_piece(vocab,t,buf,sizeof(buf),0,true);
@@ -64,8 +68,9 @@ static std::string bytes(JNIEnv *env,jbyteArray a){jsize n=env->GetArrayLength(a
 extern "C" JNIEXPORT jlong JNICALL Java_ru_secondmemory_LocalAi_open(JNIEnv* env,jclass,jbyteArray path){try{cancelled=false;return reinterpret_cast<jlong>(open_model(bytes(env,path)));}catch(...){return 0;}}
 extern "C" JNIEXPORT jbyteArray JNICALL Java_ru_secondmemory_LocalAi_generate(JNIEnv* env,jclass,jlong ptr,jbyteArray prompt){try{auto s=run(reinterpret_cast<Engine*>(ptr),bytes(env,prompt));auto b=env->NewByteArray(s.size());if(b)env->SetByteArrayRegion(b,0,s.size(),reinterpret_cast<const jbyte*>(s.data()));return b;}catch(...){return nullptr;}}
 extern "C" JNIEXPORT jbyteArray JNICALL Java_ru_secondmemory_LocalAi_generateAnalysis(JNIEnv* env,jclass,jlong ptr,jbyteArray prompt){try{auto s=run(reinterpret_cast<Engine*>(ptr),bytes(env,prompt),true);auto b=env->NewByteArray(s.size());if(b)env->SetByteArrayRegion(b,0,s.size(),reinterpret_cast<const jbyte*>(s.data()));return b;}catch(...){return nullptr;}}
+extern "C" JNIEXPORT jbyteArray JNICALL Java_ru_secondmemory_LocalAi_generateSearch(JNIEnv* env,jclass,jlong ptr,jbyteArray prompt){try{auto s=run(reinterpret_cast<Engine*>(ptr),bytes(env,prompt),false,true);auto b=env->NewByteArray(s.size());if(b)env->SetByteArrayRegion(b,0,s.size(),reinterpret_cast<const jbyte*>(s.data()));return b;}catch(...){return nullptr;}}
 extern "C" JNIEXPORT void JNICALL Java_ru_secondmemory_LocalAi_free(JNIEnv*,jclass,jlong ptr){delete reinterpret_cast<Engine*>(ptr);}
 extern "C" JNIEXPORT void JNICALL Java_ru_secondmemory_LocalAi_cancel(JNIEnv*,jclass){cancelled=true;}
 #else
-int main(int argc,char**argv){if(argc!=3&&argc!=4)return 2;try{std::unique_ptr<Engine> e(open_model(argv[1]));std::ifstream in(argv[2]);std::string prompt((std::istreambuf_iterator<char>(in)),{});std::cout<<run(e.get(),prompt,argc==4&&std::string(argv[3])=="--analysis")<<std::endl;return 0;}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}}
+int main(int argc,char**argv){if(argc!=3&&argc!=4)return 2;try{std::unique_ptr<Engine> e(open_model(argv[1]));std::ifstream in(argv[2]);std::string prompt((std::istreambuf_iterator<char>(in)),{});std::cout<<run(e.get(),prompt,argc==4&&std::string(argv[3])=="--analysis",argc==4&&std::string(argv[3])=="--search")<<std::endl;return 0;}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}}
 #endif

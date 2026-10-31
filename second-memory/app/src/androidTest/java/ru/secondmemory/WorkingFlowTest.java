@@ -105,4 +105,15 @@ public class WorkingFlowTest {
   for(int i=0;i<20&&found.get()==null;i++){Thread.sleep(250);inst.runOnMainSync(()->found.set(button(a.getWindow().getDecorView(),"Источник: "+id+" · 18:00:00")));}
   assertNotNull("Full-conversation decisions must be shown with a source button",found.get());inst.runOnMainSync(()->{assertNotNull(button(a.getWindow().getDecorView(),"Скопировать всю сводку"));assertNotNull(button(a.getWindow().getDecorView(),"Подготовить ИИ / начать анализ"));a.finish();});
  }
+ @Test public void forgottenFragmentSearchFindsOldConversationWithoutDateOrAnalysis()throws Exception{
+  Context c=inst.getTargetContext();String id="recall-old-"+System.nanoTime();File dir=new File(c.getFilesDir(),"sessions/"+id);assertTrue(dir.mkdirs());long when=java.time.LocalDate.now().minusDays(8).atTime(12,0).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+  try(Writer out=new OutputStreamWriter(new FileOutputStream(new File(dir,"transcript.jsonl")),StandardCharsets.UTF_8)){out.write(new JSONObject().put("text","Отправили заказным письмом, трек пока не сообщили.").put("saved_at","12:00:00").put("recorded_at",when).toString()+"\n");out.write(new JSONObject().put("text","Тогда запросим номер отправления завтра.").put("saved_at","12:01:00").put("recorded_at",when+60000).toString()+"\n");}
+  Activity a=inst.startActivitySync(new Intent(c,MemoryActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));inst.waitForIdleSync();String date=java.time.Instant.ofEpochMilli(when).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));java.util.concurrent.atomic.AtomicReference<Button> found=new java.util.concurrent.atomic.AtomicReference<>();
+  inst.runOnMainSync(()->{assertEquals("Период: всё время",button(a.getWindow().getDecorView(),"Период: всё время").getText().toString());android.widget.EditText edit=findEdit(a.getWindow().getDecorView());assertNotNull(edit);edit.setText("заказное писмо");button(a.getWindow().getDecorView(),"Найти").performClick();});
+  for(int i=0;i<40&&found.get()==null;i++){Thread.sleep(200);inst.runOnMainSync(()->found.set(button(a.getWindow().getDecorView(),"Контекст разговора · "+date)));}
+  assertNotNull("A fragment must find an eight-day-old raw transcript without prepared AI",found.get());
+  inst.runOnMainSync(()->{assertNotNull(button(a.getWindow().getDecorView(),"Скопировать всё найденное"));found.get().performClick();});inst.waitForIdleSync();Thread.sleep(200);try(android.os.ParcelFileDescriptor fd=inst.getUiAutomation().executeShellCommand("screencap -p /data/local/tmp/recall-context.png")){new java.io.FileInputStream(fd.getFileDescriptor()).read();}inst.runOnMainSync(a::finish);
+ }
+ private android.widget.EditText findEdit(android.view.View view){if(view instanceof android.widget.EditText)return (android.widget.EditText)view;if(view instanceof android.view.ViewGroup){android.view.ViewGroup group=(android.view.ViewGroup)view;for(int i=0;i<group.getChildCount();i++){android.widget.EditText edit=findEdit(group.getChildAt(i));if(edit!=null)return edit;}}return null;}
+
 }
