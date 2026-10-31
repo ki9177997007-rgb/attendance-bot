@@ -113,7 +113,7 @@ jobs:
             mkdir -p app/build/reports/androidTests/screenshots
             adb pull /data/local/tmp/main-font-1.0.png app/build/reports/androidTests/screenshots/
             adb pull /data/local/tmp/main-font-1.8.png app/build/reports/androidTests/screenshots/
-            adb pull /data/local/tmp/speech-quality.txt app/build/reports/androidTests/
+            adb logcat -d -s SpeechQuality:I > app/build/reports/androidTests/speech-quality.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
