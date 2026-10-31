@@ -11,8 +11,7 @@ public class ReminderReceiver extends BroadcastReceiver {
   AlarmManager a=c.getSystemService(AlarmManager.class);PendingIntent p=alarm(c,id);a.cancel(p);
   if(due<=0)return;
   long at=Math.max(System.currentTimeMillis()+1000,due);
-  if(Build.VERSION.SDK_INT<31||a.canScheduleExactAlarms())a.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,p);
-  else a.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,p);
+  try{if(Build.VERSION.SDK_INT<31||a.canScheduleExactAlarms())a.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,p);else a.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,p);}catch(SecurityException e){a.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,p);}
  }
  static void restore(Context c){try(TaskDb db=new TaskDb(c)){for(TaskDb.Row r:db.all())if(!r.completed&&r.due>0&&!r.notified)schedule(c,r.id,r.due);}}
  @Override public void onReceive(Context c,Intent i){

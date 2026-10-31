@@ -35,7 +35,7 @@ public class AiJob extends JobService {
          String result=ai.ask(AiResult.prompt(text,context,Staff.get(this),recorded,ZoneId.systemDefault()));
          if(stopped||RecorderService.running){more=true;return;}
          try{AiResult task=AiResult.parse(result,recorded,ZoneId.systemDefault());
-          if(task!=null)db.semantic(key,text,task.action,task.assignee,task.due,o.optBoolean("priority",false),recorded);
+          if(task!=null){long explicitDue=DueParser.parse(text,recorded,ZoneId.systemDefault());db.semantic(key,text,task.action,task.assignee,explicitDue,o.optBoolean("priority",false),recorded);ReminderReceiver.restore(this);}
          }catch(JSONException e){appendError(dir,index,"Некорректный ответ модели; проверь исходную реплику");}
          save(key,index);
         }

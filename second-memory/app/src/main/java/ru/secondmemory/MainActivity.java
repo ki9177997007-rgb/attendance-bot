@@ -19,7 +19,7 @@ public class MainActivity extends Activity {
         public void run() {
             toggle.setText(RecorderService.running ? "ВЫКЛ" : "ВКЛ");
             toggle.setEnabled(!RecorderService.stopping);
-            status.setText(RecorderService.message + "\n\n" + SyncEngine.status + "\n"+LocalModel.status(MainActivity.this)+"\n"+AiJob.status+"\nУдерживай кнопку: подключение и записи.");
+            status.setText(RecorderService.message + "\n\n" + SyncEngine.status + "\n"+LocalModel.status(MainActivity.this)+"\n"+AiJob.status+reminderStatus()+"\nУдерживай кнопку: подключение и записи.");
             handler.postDelayed(this, 500);
         }
     };
@@ -89,6 +89,11 @@ public class MainActivity extends Activity {
         }
     }
 
+    private String reminderStatus(){
+        if(!getSystemService(android.app.NotificationManager.class).areNotificationsEnabled())return "\nУведомления запрещены: включи их в настройках приложения";
+        if(Build.VERSION.SDK_INT>=31&&!getSystemService(android.app.AlarmManager.class).canScheduleExactAlarms())return "\nТочные напоминания не разрешены: Android может задержать сигнал";
+        return "";
+    }
     private void editStaff(){EditText input=new EditText(this);input.setHint("По одному сотруднику на строку");input.setText(Staff.get(this));new AlertDialog.Builder(this).setTitle("Текущие сотрудники").setView(input).setPositiveButton("Сохранить",(d,w)->Staff.set(this,input.getText().toString())).setNegativeButton("Назад",null).show();}
     private void setupAi(){
         if(LocalModel.ready(this)){AiJob.schedule(this);Toast.makeText(this,"Разбор записей поставлен в очередь",Toast.LENGTH_LONG).show();return;}

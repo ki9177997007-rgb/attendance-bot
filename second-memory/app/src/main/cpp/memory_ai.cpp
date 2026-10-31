@@ -22,7 +22,7 @@ static Engine *open_model(const std::string &path){
  std::call_once(init_flag, []{llama_backend_init();});
  auto e=std::make_unique<Engine>();auto mp=llama_model_default_params();mp.n_gpu_layers=0;
  e->model=llama_model_load_from_file(path.c_str(),mp);if(!e->model)return nullptr;
- auto cp=llama_context_default_params();cp.n_ctx=2048;cp.n_batch=256;cp.n_ubatch=128;cp.n_threads=4;cp.n_threads_batch=4;
+ auto cp=llama_context_default_params();cp.n_ctx=4096;cp.n_batch=256;cp.n_ubatch=128;cp.n_threads=4;cp.n_threads_batch=4;
  cp.abort_callback=[](void*){return cancelled.load();};
  e->ctx=llama_init_from_model(e->model,cp);if(!e->ctx)return nullptr;return e.release();
 }
@@ -31,7 +31,7 @@ static std::string run(Engine *e,const std::string &prompt){
  cancelled=false;llama_kv_cache_clear(e->ctx);
  const auto *vocab=llama_model_get_vocab(e->model);
  int n=-llama_tokenize(vocab,prompt.data(),prompt.size(),nullptr,0,true,true);
- if(n<=0||n>1536)throw std::runtime_error("Prompt too long");
+ if(n<=0||n>3500)throw std::runtime_error("Prompt too long");
  std::vector<llama_token> tokens(n);
  n=llama_tokenize(vocab,prompt.data(),prompt.size(),tokens.data(),tokens.size(),true,true);
  for(int offset=0;offset<n;offset+=256){if(cancelled)throw std::runtime_error("Cancelled");auto batch=llama_batch_get_one(tokens.data()+offset,std::min(256,n-offset));if(llama_decode(e->ctx,batch))throw std::runtime_error("Decode failed");}
