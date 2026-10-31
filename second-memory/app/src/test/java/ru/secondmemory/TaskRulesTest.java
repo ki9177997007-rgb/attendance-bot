@@ -2,6 +2,7 @@ package ru.secondmemory;
 import org.junit.Test;
 import static org.junit.Assert.*;
 public class TaskRulesTest {
+ @Test public void staffCanChange(){assertTrue(TaskRules.candidate("Сергей, подготовь документы по Иванову"));assertFalse(TaskRules.candidate("Сергей сегодня ушёл домой"));}
  @Test public void explicitRussianInstructionsBecomeCandidates() {
   assertTrue(TaskRules.candidate("Олег, подготовь документы по Иванову завтра"));
   assertTrue(TaskRules.candidate("напомни позвонить в больницу"));

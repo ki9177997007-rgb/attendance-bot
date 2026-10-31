@@ -123,7 +123,7 @@ public class RecorderService extends Service {
             SyncEngine.kick(this);
             if (!failed) message = "Выключено. Запись и текст сохранены на телефоне." +
                 (owner == null ? " Обучение голосу ещё не закончено." : " Образец голоса сохранён.") + exported;
-            main.post(() -> { worker = null; running = false; stopping = false; stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(); });
+            main.post(() -> { worker = null; running = false; stopping = false; AiJob.schedule(this); ReminderReceiver.restore(this); stopForeground(STOP_FOREGROUND_REMOVE); stopSelf(); });
         }
     }
     private WavWriter nextWav() throws IOException {
@@ -159,13 +159,14 @@ public class RecorderService extends Service {
             label = SpeakerProfile.probableOwner(owner, voice, frames) ? "ПРИОРИТЕТ: ПОХОЖ НА ТВОЙ ГОЛОС" : "ГОЛОС НЕ ПОДТВЕРЖДЁН";
         }
         String timestamp = new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date());
+        data.put("recorded_at",System.currentTimeMillis());
         data.put("label", label).put("saved_at", timestamp).put("priority", label.startsWith("ПРИОРИТЕТ"));
         append(new File(session, "transcript.jsonl"), data.toString() + "\n");
         String line = "[" + timestamp + "] [" + label + "] " + text + "\n";
         append(new File(session, "transcript.txt"), line);
         if (label.startsWith("ПРИОРИТЕТ")) append(new File(session, "priority.txt"), line);
         if (!"ОБУЧЕНИЕ".equals(label)) {
-            try (TaskDb db = new TaskDb(this)) { db.offer(sessionId, text, label.startsWith("ПРИОРИТЕТ")); }
+            try (TaskDb db = new TaskDb(this)) { db.offer(sessionId, text, label.startsWith("ПРИОРИТЕТ")); ReminderReceiver.restore(this); }
             catch (RuntimeException e) { message = "Текст сохранён, но очередь задач недоступна: " + e.getMessage(); return; }
         }
         message = prompt();

@@ -19,7 +19,7 @@ public class MainActivity extends Activity {
         public void run() {
             toggle.setText(RecorderService.running ? "ВЫКЛ" : "ВКЛ");
             toggle.setEnabled(!RecorderService.stopping);
-            status.setText(RecorderService.message + "\n\n" + SyncEngine.status + "\nУдерживай кнопку: подключение и записи.");
+            status.setText(RecorderService.message + "\n\n" + SyncEngine.status + "\n"+LocalModel.status(MainActivity.this)+"\n"+AiJob.status+"\nУдерживай кнопку: подключение и записи.");
             handler.postDelayed(this, 500);
         }
     };
@@ -47,13 +47,21 @@ public class MainActivity extends Activity {
         });
         toggle.setOnLongClickListener(v -> {
             new AlertDialog.Builder(this).setTitle("Вторая память")
-                .setItems(new String[]{"Подключить YouGile", "Открыть / поделиться записью", "Синхронизировать поручения", "Заново запомнить мой голос"}, (dialog, which) -> {
+                .setItems(new String[]{"Подключить YouGile", "Открыть / поделиться записью", "Синхронизировать поручения", "Заново запомнить мой голос", "Поручения и напоминания", "Сотрудники", "Локальная нейросеть", "Разрешить точные напоминания"}, (dialog, which) -> {
                     if (which == 0) startActivity(new Intent(this, ConnectActivity.class));
                     else if (which == 1) {
                         Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE);
                         pick.putExtra(DocumentsContract.EXTRA_INITIAL_URI, DocumentsContract.buildDocumentUri(RecordingsProvider.AUTHORITY, "root"));
                         startActivityForResult(pick, 10);
                     } else if (which == 2) SyncEngine.kick(this);
+                    else if(which==4)startActivity(new Intent(this,TasksActivity.class));
+                    else if(which==5)editStaff();
+                    else if(which==6)setupAi();
+                    else if(which==7){
+                        if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},3);
+                        else if(Build.VERSION.SDK_INT>=31&&!getSystemService(android.app.AlarmManager.class).canScheduleExactAlarms())startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,android.net.Uri.parse("package:"+getPackageName())));
+                        else Toast.makeText(this,"Точные напоминания разрешены",Toast.LENGTH_SHORT).show();
+                    }
                     else if (RecorderService.running || RecorderService.stopping) Toast.makeText(this,"Сначала выключи запись",Toast.LENGTH_SHORT).show();
                     else new AlertDialog.Builder(this).setMessage("Сбросить только образец голоса? Записи сохранятся.")
                         .setPositiveButton("Сбросить",(d,w)->{
@@ -64,10 +72,11 @@ public class MainActivity extends Activity {
             return true;
         });
         SyncJob.schedule(this);
+        AiJob.schedule(this);
+        ReminderReceiver.restore(this);
         SyncEngine.kick(this);
-        if (!getPreferences(MODE_PRIVATE).getBoolean("setupShown",false)) {
-            getPreferences(MODE_PRIVATE).edit().putBoolean("setupShown",true).apply();
-            startActivity(new Intent(this,ConnectActivity.class));
+        if(!getPreferences(MODE_PRIVATE).getBoolean("aiSetupShown",false)){
+            getPreferences(MODE_PRIVATE).edit().putBoolean("aiSetupShown",true).apply();setupAi();
         }
     }
     @Override protected void onActivityResult(int request,int result,Intent data) {
@@ -80,6 +89,13 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void editStaff(){EditText input=new EditText(this);input.setHint("По одному сотруднику на строку");input.setText(Staff.get(this));new AlertDialog.Builder(this).setTitle("Текущие сотрудники").setView(input).setPositiveButton("Сохранить",(d,w)->Staff.set(this,input.getText().toString())).setNegativeButton("Назад",null).show();}
+    private void setupAi(){
+        if(LocalModel.ready(this)){AiJob.schedule(this);Toast.makeText(this,"Разбор записей поставлен в очередь",Toast.LENGTH_LONG).show();return;}
+        new AlertDialog.Builder(this).setTitle("Локальная нейросеть без API").setMessage("Один раз загрузится 1,12 ГБ. Нужно 1,5 ГБ свободного места. После загрузки разговоры обрабатываются на телефоне. "+LocalModel.status(this))
+          .setPositiveButton("Скачать по Wi-Fi",(d,w)->downloadAi(true)).setNeutralButton("Любая сеть",(d,w)->downloadAi(false)).setNegativeButton("Позже",null).show();
+    }
+    private void downloadAi(boolean wifi){try{LocalModel.download(this,wifi);}catch(Exception e){Toast.makeText(this,e.getMessage(),Toast.LENGTH_LONG).show();}}
     private void requestStart() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 1);
@@ -92,11 +108,13 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 2);
             return;
         }
+        getSystemService(android.app.job.JobScheduler.class).cancel(405);
         try { startForegroundService(new Intent(this, RecorderService.class).setAction("START")); }
         catch (RuntimeException e) { RecorderService.message = "Не удалось включить: " + e.getMessage(); }
     }
     @Override public void onRequestPermissionsResult(int request, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(request, permissions, results);
+        if(request==3){ReminderReceiver.restore(this);return;}
         if (request == 2 || (request == 1 && results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED)) requestStart();
         else RecorderService.message = "Для работы разреши доступ к микрофону.";
     }

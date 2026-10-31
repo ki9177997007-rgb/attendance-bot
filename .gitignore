@@ -3,3 +3,6 @@
 **/local.properties
 second-memory/app/src/main/assets/*.zip
 **/__pycache__/
+
+second-memory/vendor/
+second-memory/native-test/

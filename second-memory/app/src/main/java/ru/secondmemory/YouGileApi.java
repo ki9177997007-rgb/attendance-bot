@@ -48,12 +48,13 @@ final class YouGileApi {
     String send(TaskDb.Row row,JSONObject config) throws Exception {
         return call("POST","/api-v2/tasks",payload(row,config)).getString("id");
     }
+    static String description(TaskDb.Row row){return "Черновик поручения из речи. Проверь распознавание, исполнителя и срок.\n"+row.text+"\nИсполнитель: "+(row.assignee==null?"":row.assignee)+"\nСрок: "+(row.due==0?"не задан":new java.util.Date(row.due))+"\nЛокальная запись: "+row.session;}
     static JSONObject payload(TaskDb.Row row,JSONObject config) throws JSONException {
         return new JSONObject().put("title",TaskRules.title(row.text))
             .put("columnId",config.getString(row.priority?"inbox":"review"))
-            .put("description","Черновик поручения из речи. Проверь распознавание, исполнителя и срок.\n"+row.text+"\nЛокальная запись: "+row.session)
+            .put("description",description(row))
             .put("idempotencyKey","second-memory-task-"+row.id)
             .put("apiData",new JSONObject().put("secondMemoryId",row.id))
-            .put("completed",false);
+            .put("completed",row.completed);
     }
 }

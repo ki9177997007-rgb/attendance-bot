@@ -27,10 +27,12 @@ final class SyncEngine {
             }
             for(TaskDb.Row row:db.query(false,company)) {
                 if(Thread.currentThread().isInterrupted())return;
+                if(row.dirty){api.call("PUT","/api-v2/tasks/"+row.remote,new JSONObject().put("title",TaskRules.title(row.text)).put("description",YouGileApi.description(row)).put("completed",row.completed));db.clean(row);}
                 JSONObject remote=api.call("GET","/api-v2/tasks/"+row.remote,null);
                 db.checked(row.id,remote.optBoolean("completed",false));
                 Thread.sleep(350);
             }
+            ReminderReceiver.restore(context);
             status="YouGile подключён · в очереди: "+db.pendingCount();
         } catch(Exception e) {
             status="YouGile: отправка отложена. "+e.getMessage();

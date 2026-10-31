@@ -24,11 +24,17 @@ jobs:
           echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
       - name: Install Android SDK packages
         run: |
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Fetch pinned local inference engine
+        run: |
+          mkdir -p vendor/llama.cpp
+          git -C vendor/llama.cpp init
+          git -C vendor/llama.cpp fetch --depth 1 https://github.com/ggml-org/llama.cpp.git 74d4f5b041ad837153b0e90fc864b8290e01d8d5
+          git -C vendor/llama.cpp checkout FETCH_HEAD
       - name: Bundle offline speech and speaker models
         run: python3 scripts/prepare_models.py
       - name: Test and build debug APK
@@ -37,3 +43,22 @@ jobs:
         with:
           name: second-memory-debug-apk
           path: second-memory/app/build/outputs/apk/debug/*.apk
+
+  model-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: second-memory
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch pinned engine
+        run: |
+          mkdir -p vendor/llama.cpp
+          git -C vendor/llama.cpp init
+          git -C vendor/llama.cpp fetch --depth 1 https://github.com/ggml-org/llama.cpp.git 74d4f5b041ad837153b0e90fc864b8290e01d8d5
+          git -C vendor/llama.cpp checkout FETCH_HEAD
+      - name: Build and test real offline inference
+        run: |
+          cmake -S app/src/main/cpp -B native-test -DCMAKE_BUILD_TYPE=Release
+          cmake --build native-test -j 2
+          python3 scripts/test_local_model.py
