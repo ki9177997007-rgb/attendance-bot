@@ -41,7 +41,7 @@ str ::= "\"" ([^"\\\x00-\x1F] | "\\" ["\\/bfnrt])* "\""
 ws ::= [ \t\n\r]*
 )GRAM";
  const char *analysis_grammar=R"GRAM(root ::= "{" ws "\"items\":" ws "[" ws (item (ws "," ws item)? (ws "," ws item)? (ws "," ws item)? (ws "," ws item)? (ws "," ws item)?)? ws "]" ws "}"
-item ::= "{" ws "\"kind\":" ws kind ws "," ws "\"text\":" ws str ws "," ws "\"owner\":" ws str ws "," ws "\"line\":" ws num ws "," ws "\"quote\":" ws str ws "}"
+item ::= "{" ws "\"kind\":" ws kind ws "," ws "\"text\":" ws str ws "," ws "\"owner\":" ws str ws "," ws "\"line\":" ws num ws "}"
 kind ::= "\"topic\"" | "\"fact\"" | "\"decision\"" | "\"promise\"" | "\"task\"" | "\"question\"" | "\"risk\""
 num ::= [1-9] [0-9]*
 str ::= "\"" ([^"\\\x00-\x1F] | "\\" ["\\/bfnrt])* "\""
