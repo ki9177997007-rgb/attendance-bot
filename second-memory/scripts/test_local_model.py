@@ -53,7 +53,7 @@ pathlib.Path("native-test/search-prompt.txt").write_text(prompt)
 result=subprocess.run(["native-test/memory_ai",str(path),"native-test/search-prompt.txt","--search"],capture_output=True,text=True,timeout=180)
 if result.returncode:raise RuntimeError(result.stderr[-6000:])
 value=json.loads(result.stdout.strip());print("Semantic memory search terms:",value,flush=True)
-assert 1<=len(value["terms"])<=12
+assert 1<=len(value["terms"])<=8
 assert any(re.search("выплат|перечисл|поступ|сч[её]т|ден",term,re.I) for term in value["terms"])
 assert all(isinstance(term,str) and 0<len(term)<=80 for term in value["terms"])
 print("Real Qwen memory query expansion: PASS")

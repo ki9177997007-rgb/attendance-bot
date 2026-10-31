@@ -47,12 +47,12 @@ num ::= [1-9] [0-9]*
 str ::= "\"" ([^"\\\x00-\x1F] | "\\" ["\\/bfnrt])* "\""
 ws ::= [ \t\n\r]*
 )GRAM";
- const char *search_grammar=R"GRAM(root ::= "{" ws "\"terms\":" ws "[" ws str (ws "," ws str)* ws "]" ws "}"
-str ::= "\"" ([^"\\\x00-\x1F] | "\\" ["\\/bfnrt])* "\""
-ws ::= [ \t\n\r]*
+ const char *search_grammar=R"GRAM(root ::= "{" ws "\"terms\":" ws "[" ws str (ws "," ws str){0,7} ws "]" ws "}"
+str ::= "\"" [а-яА-ЯёЁa-zA-Z0-9 -]{1,32} "\""
+ws ::= [ \t\n\r]{0,2}
 )GRAM";
  auto *constraint=llama_sampler_init_grammar(vocab,search?search_grammar:analysis?analysis_grammar:grammar,"root");if(!constraint)throw std::runtime_error("Invalid grammar");
- llama_sampler_chain_add(sampler.get(),constraint);llama_sampler_chain_add(sampler.get(),llama_sampler_init_greedy());
+ llama_sampler_chain_add(sampler.get(),constraint);if(search)llama_sampler_chain_add(sampler.get(),llama_sampler_init_penalties(64,1.1f,0.0f,0.0f));llama_sampler_chain_add(sampler.get(),llama_sampler_init_greedy());
  std::string result;
  for(int i=0;i<(search?384:analysis?1536:384);i++){
   if(cancelled)throw std::runtime_error("Cancelled");
