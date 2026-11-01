@@ -10,7 +10,7 @@ import org.json.*;
 /** Runs only explicit, recent owner-verified commands; conversational audio stays independent. */
 final class AssistantEngine {
  private static final ExecutorService worker=Executors.newSingleThreadExecutor();
- static boolean candidate(Context c,String text,long recorded){if(!c.getSharedPreferences("voice",0).getBoolean("enabled",false))return false;if(PhoneCommand.addressed(text))return true;return recorded<=VoiceOutput.followUntil&&recorded>VoiceOutput.followUntil-20000&&VoiceIntent.parse(text).kind!=VoiceIntent.Kind.UNKNOWN;}
+ static boolean candidate(Context c,String text,long recorded){if(!c.getSharedPreferences("voice",0).getBoolean("enabled",false))return false;if(PhoneCommand.addressed(text))return true;return recorded<=VoiceOutput.followUntil&&recorded>=VoiceOutput.followUntil-20000&&VoiceIntent.parse(text).kind!=VoiceIntent.Kind.UNKNOWN;}
  static void offer(Context context,String text,float[] pcm,long recorded,String segment){Context c=context.getApplicationContext();if(System.currentTimeMillis()-recorded>120000||recorded>System.currentTimeMillis()+5000)return;worker.submit(()->{try{
   if(!c.getSharedPreferences("voice",0).getBoolean("enabled",false))return;if(!OwnerVoice.enrolled(c)){error(c,"Для голосовых команд сохрани образец голоса в настройках");return;}
   boolean accepted;try(OwnerVoice owner=new OwnerVoice(c)){accepted=owner.accepts(c,pcm);}if(!accepted){error(c,"Команда пропущена: голос не совпал с образцом. Повтори ближе к телефону");return;}
