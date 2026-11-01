@@ -31,7 +31,7 @@ final class SpeechQueue implements AutoCloseable {
     if(command)AssistantEngine.offer(context,text,pcm,recorded,file.getName());
     if(!saved.isEmpty())RecorderService.phraseCount++;RecorderService.transcript=context.getSharedPreferences("display",0).getString("recent","");
    }
-   touched.add(file.getParentFile());if(!file.delete())throw new IOException("Не удалось отметить обработанный фрагмент");
+   error="";touched.add(file.getParentFile());if(!file.delete())throw new IOException("Не удалось отметить обработанный фрагмент");
    context.getSharedPreferences("speech",0).edit().putString("last_engine",NeuralSpeech.NAME).putLong("last_ms",System.currentTimeMillis()-started).remove("last_error").apply();
   }catch(Exception|LinkageError|OutOfMemoryError e){error="Ошибка GigaAM: "+e.getMessage()+". Фрагмент сохранён для повторного распознавания.";context.getSharedPreferences("speech",0).edit().putString("last_error",error).apply();}finally{inFlight.remove(file.getAbsolutePath());pending.decrementAndGet();RecorderService.speechPending=pending.get();}});RecorderService.speechPending=pending.get();}
  public void close(){executor.shutdown();boolean interrupted=false;while(true){try{if(executor.awaitTermination(1,TimeUnit.SECONDS))break;RecorderService.message="Микрофон выключен. GigaAM обрабатывает фрагменты: "+pending.get();}catch(InterruptedException e){interrupted=true;}}if(interrupted)Thread.currentThread().interrupt();}
