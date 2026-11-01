@@ -7,14 +7,15 @@ import java.util.*;
 import java.util.function.BooleanSupplier;
 /** One shared worker for scheduled and user-started analysis. Commits each batch before continuing. */
 final class AnalysisWork {
- static boolean runPass(Context context,BooleanSupplier stop,File scope){boolean more=false;if(!AiJob.active.compareAndSet(false,true))return true;try{
+ static volatile Thread owner;
+ static boolean runPass(Context context,BooleanSupplier stop,File scope){boolean more=false;if(!AiJob.active.compareAndSet(false,true))return true;owner=Thread.currentThread();try{
    if(stop.getAsBoolean())return false;
    if(MemoryActivity.searching.get()||RecorderService.stopping||RecorderService.speechPending>2){AiJob.status="Жду завершения распознавания звука. Разговоры стоят в очереди.";more=true;return more;}
    if(!LocalModel.ready(context)){AiJob.status="Проверяю файл нейросети…";LocalModel.importPending(context);if(!LocalModel.verify(context)){AiJob.status="Для полного анализа нужна однократная загрузка Qwen. Открой «Анализ разговоров».";return more;}}
    context.getSharedPreferences("ai",0).edit().remove("last_error").apply();File root=new File(context.getFilesDir(),"sessions");File[] dirs=scope==null?root.listFiles(File::isDirectory):new File[]{scope};if(dirs==null)return false;Arrays.sort(dirs,(a,b)->b.getName().compareTo(a.getName()));long started=System.currentTimeMillis();
    boolean pending=false,blocked=false,waiting=false;for(File dir:dirs){List<ConversationAnalysis.Line> lines=ConversationAnalysis.read(dir);JSONObject state=ConversationAnalysis.load(dir);List<ConversationAnalysis.Line> todo=ConversationAnalysis.batch(lines,state.optInt("cursor",0));if(!todo.isEmpty()){if(RecorderService.running&&todo.stream().mapToInt(x->x.text.length()).sum()<800&&System.currentTimeMillis()-new File(dir,"transcript.jsonl").lastModified()<60000){waiting=true;continue;}if(state.optInt("failures",0)>=3)blocked=true;else pending=true;}}
    if(!pending&&waiting){AiJob.status="Жду окончания короткого речевого фрагмента…";return true;}
-   if(!pending){if(!blocked&&scope==null)context.getSharedPreferences("ai",0).edit().putBoolean("pending",false).apply();AiJob.status=blocked?"Есть ошибки разбора. Нажми «Повторить ошибки».":"Все доступные разговоры разобраны";return false;}
+   if(!pending){AiJob.status=blocked?"Есть ошибки разбора. Нажми «Повторить ошибки».":"Все доступные разговоры разобраны";return false;}
    if(stop.getAsBoolean())return false;
    try(LocalAi ai=new LocalAi(LocalModel.file(context).getAbsolutePath());TaskDb db=new TaskDb(context)){
     boolean work=true;while(work){work=false;for(File dir:dirs){
@@ -34,9 +35,8 @@ final class AnalysisWork {
     }}
    }
    if(more)return true;
-   if(scope==null)context.getSharedPreferences("ai",0).edit().putBoolean("pending",false).apply();
    blocked=false;for(File dir:dirs)if(ConversationAnalysis.load(dir).optInt("failures",0)>=3)blocked=true;AiJob.status=blocked?"Разбор готов частично: есть записи, требующие повтора. Открой «Анализ разговоров».":"Анализ всех доступных разговоров завершён. Результаты — на экране «Анализ разговоров».";ReminderReceiver.restore(context);SyncEngine.kick(context);
   }catch(Exception|LinkageError|OutOfMemoryError e){if(!stop.getAsBoolean()){if(RecorderService.speechPending>2){AiJob.status="Разбор приостановлен: приоритет у распознавания речи";more=true;}else{AiJob.status="Анализ остановлен: "+e.getMessage();context.getSharedPreferences("ai",0).edit().putString("last_error",AiJob.status).apply();}}}
-  finally{AiJob.active.set(false);}return more;
+  finally{owner=null;AiJob.active.set(false);}return more;
  }
 }
