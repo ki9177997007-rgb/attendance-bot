@@ -33,6 +33,7 @@ public class MainActivity extends Activity {
   TextView title=text("Вторая память",22,Color.rgb(20,31,51));title.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));page.addView(title);
   Button settings=new Button(this);settings.setText("Настройки");settings.setTextSize(14);settings.setAllCaps(false);settings.setMinHeight(dp(48));settings.setOnClickListener(v->startActivity(new Intent(this,SettingsActivity.class)));page.addView(settings,new LinearLayout.LayoutParams(-1,-2));
   Button analysis=new Button(this);analysis.setText("Найти в памяти");analysis.setTextSize(14);analysis.setAllCaps(false);analysis.setMinHeight(dp(48));analysis.setOnClickListener(v->startActivity(new Intent(this,MemoryActivity.class)));page.addView(analysis,new LinearLayout.LayoutParams(-1,-2));
+  Button voice=new Button(this);voice.setText("Голосовой помощник");voice.setTextSize(14);voice.setAllCaps(false);voice.setOnClickListener(v->startActivity(new Intent(this,VoiceSetupActivity.class)));page.addView(voice,new LinearLayout.LayoutParams(-1,-2));
   historyScroll=new ScrollView(this);historyScroll.setFillViewport(true);historyScroll.setBackground(background(Color.WHITE));
   LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(14),dp(12),dp(14),dp(16));historyScroll.addView(content);
   state=text("",13,Color.rgb(71,85,105));content.addView(state);
@@ -44,7 +45,7 @@ public class MainActivity extends Activity {
   toggle=new Button(this);toggle.setTextSize(19);toggle.setAllCaps(false);toggle.setTextColor(Color.WHITE);toggle.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));toggle.setMinHeight(dp(68));toggle.setPadding(dp(12),dp(14),dp(12),dp(14));page.addView(toggle,new LinearLayout.LayoutParams(-1,-2));
   setContentView(page);page.requestApplyInsets();
   toggle.setOnClickListener(v->{if(RecorderService.running)startService(new Intent(this,RecorderService.class).setAction("STOP"));else requestStart();});
-  SyncJob.schedule(this);SyncEngine.kick(this);AiJob.schedule(this);ReminderReceiver.restore(this);ArchiveJob.periodic(this);
+  VoiceOutput.init(this);SyncJob.schedule(this);SyncEngine.kick(this);AiJob.schedule(this);ReminderReceiver.restore(this);ArchiveJob.periodic(this);
  }
  private void requestStart(){
   if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},1);return;}

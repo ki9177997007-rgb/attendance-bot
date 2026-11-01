@@ -10,8 +10,8 @@ final class VoiceIntent {
  static VoiceIntent parse(String raw){String s=body(raw);Kind k=Kind.UNKNOWN;int n=ordinal(s);
   if(s.matches(".*\\b(если|например|допустим)\\b.*")||s.startsWith("не "))return new VoiceIntent(k,s,n);
   if(s.matches("(?:что|че|чего) (?:мне )?(?:там )?(?:надо |нужно )?(?:сделать|делать)(?: дальше| сегодня)?")||s.matches("(?:мои (?:дела|задачи|поручения)|список (?:дел|задач)|что по задачам)"))k=Kind.LIST;
-  else if(s.matches(".*\\b(сделал|сделано|выполнил|выполнено|готово|заверши|закрой)\\b.*")&&n>=0)k=Kind.DONE;
-  else if(s.matches(".*\\b(перенеси|отложи|перенос|позже)\\b.*")&&n>=0)k=Kind.SNOOZE;
+  else if(s.matches(".*\\b(сделал|сделано|выполнил|выполнено|готово|заверши|закрой)\\b.*")&&n>=0&&s.matches("^(?:(?:я |уже )?(?:первое|первую|первый|второе|вторую|второй|третье|третью|третий|четвертое|четвертую|четвертый|пятое|пятую|пятый|[1-5]) .+|(?:закрой|заверши) .+)"))k=Kind.DONE;
+  else if(s.matches(".*\\b(перенеси|отложи|перенос|позже)\\b.*")&&n>=0&&s.matches("^(?:перенеси|отложи) .+"))k=Kind.SNOOZE;
   else if(s.startsWith("напомни ")||s.startsWith("напоминание "))k=Kind.REMINDER;
   else if(s.matches("(?:повтори|повтори список|еще раз)"))k=Kind.REPEAT;
   else if(s.matches("(?:помощь|что ты умеешь|какие команды)"))k=Kind.HELP;
