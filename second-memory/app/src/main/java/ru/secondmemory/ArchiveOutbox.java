@@ -39,7 +39,7 @@ final class ArchiveOutbox {
  }
  static JSONObject read(File file)throws Exception{
   if(file.length()>256000)throw new IOException("Фрагмент архива слишком большой");
-  try(InputStream in=new FileInputStream(file);ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1){out.write(b,0,n);if(out.size()>256000)throw new IOException("Фрагмент архива слишком большой");}return new JSONObject(new String(out.toByteArray(),StandardCharsets.UTF_8));}
+  try(InputStream in=new AtomicFile(file).openRead();ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1){out.write(b,0,n);if(out.size()>256000)throw new IOException("Фрагмент архива слишком большой");}return new JSONObject(new String(out.toByteArray(),StandardCharsets.UTF_8));}
  }
  private static void write(File f,String value)throws IOException{
   AtomicFile a=new AtomicFile(f);FileOutputStream out=null;try{out=a.startWrite();out.write(value.getBytes(StandardCharsets.UTF_8));a.finishWrite(out);}catch(IOException e){if(out!=null)a.failWrite(out);throw e;}
