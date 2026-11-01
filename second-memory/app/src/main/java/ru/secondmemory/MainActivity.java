@@ -3,58 +3,41 @@ import android.Manifest;
 import android.app.*;
 import android.content.*;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.*;
 import android.os.*;
 import android.view.*;
 import android.widget.*;
+import java.time.*;
+import java.time.format.*;
+import java.util.*;
 
 public class MainActivity extends Activity {
- private Button toggle;private TextView state,live,history;private ScrollView historyScroll;
+ private Button toggle;private TextView headline,caption,history,status,taskCount,taskPreview,voiceHint;private Wave wave;private long lastTasks;
  private final Handler handler=new Handler(Looper.getMainLooper());
- private int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
- private TextView text(String value,int size,int color){TextView t=new TextView(this);t.setText(value);t.setTextSize(size);t.setTextColor(color);t.setTypeface(Typeface.create("sans-serif",Typeface.NORMAL));t.setIncludeFontPadding(true);return t;}
- private GradientDrawable background(int color){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(16));return d;}
  private final Runnable refresh=new Runnable(){public void run(){
-  toggle.setText(RecorderService.stopping?"Сохраняю…":RecorderService.running?"ВЫКЛ · остановить запись":"ВКЛ · начать запись");toggle.setEnabled(!RecorderService.stopping);
-  toggle.setBackground(background(RecorderService.running?Color.rgb(166,42,45):Color.rgb(29,78,216)));
-  String message=RecorderService.message;int export=message.indexOf(" Текст:");if(export>=0)message=message.substring(0,export);
-  state.setText((CommandQueue.read(MainActivity.this).length()>0?"Есть команды: открой Настройки → Команды телефона.\n":"")+message+(RecorderService.running?"\nМикрофон: "+RecorderService.micLevel+" / 100 · фраз: "+RecorderService.phraseCount+" · в обработке: "+RecorderService.speechPending:""));
-  live.setText(RecorderService.partial.isEmpty()?(RecorderService.running?"Слушаю… Сделай короткую паузу, чтобы сохранить фразу.":"GigaAM v3 · речь распознаётся на телефоне."):RecorderService.partial);
-  String value=RecorderService.transcript;if(value.isEmpty())value=getSharedPreferences("display",MODE_PRIVATE).getString("recent","");
-  String shown=value.isEmpty()?"Распознанные фразы появятся здесь.\nЗаписи и поручения доступны в настройках.":value;
-  if(!shown.contentEquals(history.getText())){boolean bottom=historyScroll.getChildAt(0).getBottom()-historyScroll.getScrollY()-historyScroll.getHeight()<dp(80);history.setText(shown);if(bottom&&RecorderService.running)historyScroll.post(()->historyScroll.fullScroll(View.FOCUS_DOWN));}handler.postDelayed(this,600);
+  boolean active=RecorderService.running;toggle.setText(RecorderService.stopping?"Сохраняю…":active?"ВЫКЛ · остановить запись":"ВКЛ · начать запись");toggle.setEnabled(!RecorderService.stopping);Ui.buttonStyle(toggle,true);
+  headline.setText(RecorderService.stopping?"Сохраняю разговор":active?"Слушаю и запоминаю":"Память под рукой");caption.setText(active?"Можно заблокировать экран. Запись продолжается.":"Включи запись — разговоры сохранятся на телефоне.");
+  voiceHint.setText(OwnerVoice.enrolled(MainActivity.this)&&getSharedPreferences("voice",0).getBoolean("enabled",false)?"«Помощник, что мне нужно сделать?»":"Настрой свой голос один раз — и обращайся «Помощник».");
+  String text=RecorderService.transcript;if(text.isEmpty())text=getSharedPreferences("display",0).getString("recent","");history.setText(text.isEmpty()?"Здесь появятся последние фразы. Запись и расшифровка работают без интернета.":text.length()>1800?text.substring(text.length()-1800):text);
+  String answer=getSharedPreferences("voice",0).getString("last_answer","");String error=getSharedPreferences("speech",0).getString("last_error","");if(error.isEmpty())error=getSharedPreferences("voice",0).getString("last_error","");status.setText(!error.isEmpty()?error:!answer.isEmpty()?answer:active?(RecorderService.speechPending>0?"Расшифровываю: "+RecorderService.speechPending+" фрагм.":"Сохранено фраз: "+RecorderService.phraseCount):"На устройстве свободно "+Ui.bytes(getFilesDir().getUsableSpace()));
+  wave.level=active?RecorderService.micLevel:0;wave.active=active;wave.invalidate();if(System.currentTimeMillis()-lastTasks>5000){lastTasks=System.currentTimeMillis();loadTasks();}handler.postDelayed(this,700);
  }};
- @Override public void onCreate(Bundle b){super.onCreate(b);
-  getWindow().setStatusBarColor(Color.rgb(244,247,252));getWindow().setNavigationBarColor(Color.rgb(244,247,252));getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-  LinearLayout page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);page.setPadding(dp(16),dp(8),dp(16),dp(8));page.setFitsSystemWindows(true);page.setBackgroundColor(Color.rgb(244,247,252));
-  page.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(dp(16)+insets.getSystemWindowInsetLeft(),dp(8)+insets.getSystemWindowInsetTop(),dp(16)+insets.getSystemWindowInsetRight(),dp(8)+insets.getSystemWindowInsetBottom());return insets.consumeSystemWindowInsets();});
-  TextView title=text("Вторая память",22,Color.rgb(20,31,51));title.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));page.addView(title);
-  Button settings=new Button(this);settings.setText("Настройки");settings.setTextSize(14);settings.setAllCaps(false);settings.setMinHeight(dp(48));settings.setOnClickListener(v->startActivity(new Intent(this,SettingsActivity.class)));page.addView(settings,new LinearLayout.LayoutParams(-1,-2));
-  Button analysis=new Button(this);analysis.setText("Найти в памяти");analysis.setTextSize(14);analysis.setAllCaps(false);analysis.setMinHeight(dp(48));analysis.setOnClickListener(v->startActivity(new Intent(this,MemoryActivity.class)));page.addView(analysis,new LinearLayout.LayoutParams(-1,-2));
-  Button voice=new Button(this);voice.setText("Голосовой помощник");voice.setTextSize(14);voice.setAllCaps(false);voice.setOnClickListener(v->startActivity(new Intent(this,VoiceSetupActivity.class)));page.addView(voice,new LinearLayout.LayoutParams(-1,-2));
-  historyScroll=new ScrollView(this);historyScroll.setFillViewport(true);historyScroll.setBackground(background(Color.WHITE));
-  LinearLayout content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(14),dp(12),dp(14),dp(16));historyScroll.addView(content);
-  state=text("",13,Color.rgb(71,85,105));content.addView(state);
-  live=text("",15,Color.rgb(29,78,216));live.setPadding(0,dp(12),0,dp(12));content.addView(live);
-  TextView subtitle=text("Расшифровка",14,Color.rgb(71,85,105));content.addView(subtitle);
-  Button copy=new Button(this);copy.setText("Скопировать текст");copy.setTextSize(13);copy.setAllCaps(false);copy.setMinHeight(dp(48));copy.setOnClickListener(v->{getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("Расшифровка",history.getText()));Toast.makeText(this,"Текст скопирован",Toast.LENGTH_SHORT).show();});content.addView(copy);
-  history=text("",16,Color.rgb(20,31,51));history.setLineSpacing(dp(3),1f);history.setTextIsSelectable(true);content.addView(history);
-  LinearLayout.LayoutParams body=new LinearLayout.LayoutParams(-1,0,1);body.topMargin=dp(6);body.bottomMargin=dp(8);page.addView(historyScroll,body);
-  toggle=new Button(this);toggle.setTextSize(19);toggle.setAllCaps(false);toggle.setTextColor(Color.WHITE);toggle.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));toggle.setMinHeight(dp(68));toggle.setPadding(dp(12),dp(14),dp(12),dp(14));page.addView(toggle,new LinearLayout.LayoutParams(-1,-2));
-  setContentView(page);page.requestApplyInsets();
-  toggle.setOnClickListener(v->{if(RecorderService.running)startService(new Intent(this,RecorderService.class).setAction("STOP"));else requestStart();});
+ @Override public void onCreate(Bundle b){super.onCreate(b);LinearLayout root=Ui.column(this);root.setPadding(Ui.dp(this,20),0,Ui.dp(this,20),0);setContentView(root);ScreenLayout.apply(this,root);
+  ScrollView scroll=new ScrollView(this);scroll.setClipToPadding(false);scroll.setVerticalScrollBarEnabled(false);LinearLayout page=Ui.column(this);scroll.addView(page);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+  LinearLayout brand=new LinearLayout(this);brand.setGravity(Gravity.CENTER_VERTICAL);TextView mark=Ui.text(this,"≋",30,Ui.TEAL);mark.setGravity(Gravity.CENTER);mark.setBackground(Ui.shape(this,Ui.SOFT,16,false));brand.addView(mark,new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));LinearLayout names=Ui.column(this);names.setPadding(Ui.dp(this,12),0,0,0);names.addView(Ui.text(this,"Вторая память",24,Ui.INK));names.addView(Ui.text(this,"Личный помощник · офлайн",12,Ui.MUTED));brand.addView(names,new LinearLayout.LayoutParams(0,-2,1));page.addView(brand);Ui.section(page,"Главное");
+  LinearLayout hero=Ui.card(page);hero.setBackground(Ui.shape(this,Ui.INK,24,false));headline=Ui.text(this,"",25,Color.WHITE);hero.addView(headline);caption=Ui.text(this,"",14,0xffc6d8d3);caption.setPadding(0,Ui.dp(this,8),0,0);hero.addView(caption);wave=new Wave(this);hero.addView(wave,new LinearLayout.LayoutParams(-1,Ui.dp(this,62)));voiceHint=Ui.text(this,"",14,0xffb8e7d1);hero.addView(voiceHint);
+  LinearLayout tasks=Ui.card(page);LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);TextView title=Ui.text(this,"Мои дела",19,Ui.INK);row.addView(title,new LinearLayout.LayoutParams(0,-2,1));taskCount=Ui.text(this,"0",22,Ui.TEAL);row.addView(taskCount);tasks.addView(row);taskPreview=Ui.label(this,"Загружаю поручения…",14);tasks.addView(taskPreview);Ui.button(tasks,"Озвучить дела",false,()->{VoiceOutput.init(this);new Thread(()->{try{AssistantEngine.execute(this,VoiceIntent.parse("мои дела"),System.currentTimeMillis(),"screen-"+System.nanoTime(),true);}catch(Exception e){runOnUiThread(()->Toast.makeText(this,"Не удалось прочитать дела",Toast.LENGTH_LONG).show());}},"spoken-tasks").start();});
+  LinearLayout readiness=Ui.card(page);status=Ui.label(this,"",14);readiness.addView(status);Ui.button(readiness,"Голосовой помощник",false,()->open(VoiceSetupActivity.class));Ui.button(readiness,"Проверить готовность",false,()->open(ReadinessActivity.class));
+  Ui.section(page,"Последние фразы");LinearLayout recent=Ui.card(page);history=Ui.label(this,"",16);recent.addView(history);Ui.button(recent,"Скопировать текст",false,()->Ui.copy(this,"Расшифровка",getSharedPreferences("display",0).getString("recent",history.getText().toString())));
+  toggle=Ui.button(root,"ВКЛ · начать запись",true,()->{if(RecorderService.running)startService(new Intent(this,RecorderService.class).setAction("STOP"));else requestStart();});toggle.setTextSize(18);toggle.setMinHeight(Ui.dp(this,64));
+  LinearLayout nav=new LinearLayout(this);nav.setGravity(Gravity.CENTER);for(String label:new String[]{"Найти в памяти","Поручения","Настройки"}){Button item=new Button(this);item.setText(label);Ui.buttonStyle(item,false);item.setTextSize(12);item.setPadding(Ui.dp(this,4),Ui.dp(this,10),Ui.dp(this,4),Ui.dp(this,10));item.setBackgroundColor(Color.TRANSPARENT);item.setOnClickListener(v->open(label.equals("Настройки")?SettingsActivity.class:label.equals("Поручения")?TasksActivity.class:MemoryActivity.class));nav.addView(item,new LinearLayout.LayoutParams(0,-2,1));}root.addView(nav);
   VoiceOutput.init(this);SyncJob.schedule(this);SyncEngine.kick(this);AiJob.schedule(this);ReminderReceiver.restore(this);ArchiveJob.periodic(this);
  }
- private void requestStart(){
-  if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},1);return;}
-  if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED&&!getPreferences(MODE_PRIVATE).getBoolean("notificationAsked",false)){
-   getPreferences(MODE_PRIVATE).edit().putBoolean("notificationAsked",true).apply();requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},2);return;
-  }
-  try{startForegroundService(new Intent(this,RecorderService.class).setAction("START"));}catch(RuntimeException e){RecorderService.message="Не удалось включить микрофон: "+e.getMessage();}
- }
- @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){super.onRequestPermissionsResult(request,permissions,results);if(request==2||(request==1&&results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED))requestStart();else RecorderService.message="Нет доступа к микрофону. Открой Настройки → Разрешения приложения.";}
- @Override protected void onResume(){super.onResume();handler.removeCallbacks(refresh);handler.post(refresh);}
+ private void open(Class<?> type){startActivity(new Intent(this,type));}
+ private void loadTasks(){new Thread(()->{int count=0;TaskDb.Row first=null;try(TaskDb db=new TaskDb(this)){for(TaskDb.Row row:db.all())if(!row.completed){count++;if(first==null||(row.due>0&&(first.due==0||row.due<first.due)))first=row;}}catch(RuntimeException ignored){}final int n=count;final String preview=first==null?"Пока нет открытых дел. Скажи: «Помощник, запиши задачу…».":(first.due>0?Instant.ofEpochMilli(first.due).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM, HH:mm",new Locale("ru")))+" · ":"")+first.text;runOnUiThread(()->{if(!isFinishing()){taskCount.setText(String.valueOf(n));taskPreview.setText(preview);}});},"home-tasks").start();}
+ private void requestStart(){if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},1);return;}if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED&&!getPreferences(MODE_PRIVATE).getBoolean("notificationAsked",false)){getPreferences(MODE_PRIVATE).edit().putBoolean("notificationAsked",true).apply();requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},2);return;}try{startForegroundService(new Intent(this,RecorderService.class).setAction("START"));}catch(RuntimeException e){RecorderService.message="Не удалось включить микрофон: "+e.getMessage();Toast.makeText(this,RecorderService.message,Toast.LENGTH_LONG).show();}}
+ @Override public void onRequestPermissionsResult(int r,String[] p,int[] g){super.onRequestPermissionsResult(r,p,g);if(r==2||(r==1&&g.length>0&&g[0]==PackageManager.PERMISSION_GRANTED))requestStart();else Toast.makeText(this,"Разреши микрофон в настройках приложения",Toast.LENGTH_LONG).show();}
+ @Override protected void onResume(){super.onResume();lastTasks=0;handler.removeCallbacks(refresh);handler.post(refresh);}
  @Override protected void onPause(){handler.removeCallbacks(refresh);super.onPause();}
+ private static class Wave extends View {int level;boolean active;private final Paint paint=new Paint(3);Wave(Context c){super(c);setContentDescription("Уровень микрофона");}protected void onDraw(Canvas canvas){super.onDraw(canvas);float w=getWidth(),h=getHeight(),step=w/32;paint.setColor(active?0xff9ee7bf:0xff53746f);for(int i=0;i<32;i++){float scale=active?(.16f+.84f*(float)Math.abs(Math.sin(i*1.8)))*Math.min(1,.12f+level/70f):.08f;float height=Math.max(Ui.dp(getContext(),4),h*.72f*scale);canvas.drawRoundRect(i*step+step*.25f,(h-height)/2,i*step+step*.7f,(h+height)/2,step*.25f,step*.25f,paint);}}}
 }

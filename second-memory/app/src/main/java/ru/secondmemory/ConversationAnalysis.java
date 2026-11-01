@@ -16,7 +16,7 @@ final class ConversationAnalysis {
  static List<Line> read(File dir)throws Exception{
   List<Line> lines=new ArrayList<>();File file=new File(dir,"transcript.jsonl");boolean json=file.isFile();if(!json)file=new File(dir,"transcript.txt");if(!file.isFile())return lines;
   try(BufferedReader reader=new BufferedReader(new InputStreamReader(new FileInputStream(file),StandardCharsets.UTF_8))){String raw;int id=0;while((raw=reader.readLine())!=null){String text=raw,time="";long recorded=file.lastModified();
-   if(json){try{JSONObject o=new JSONObject(raw);if(o.optBoolean("assistant_audio")||o.optBoolean("assistant_command"))continue;text=o.optString("text","");time=o.optString("saved_at","");recorded=o.optLong("recorded_at",recorded);}catch(JSONException e){throw new IOException("Повреждена строка расшифровки; исходный файл сохранён",e);}}
+   if(json){try{JSONObject o=new JSONObject(raw);if(o.optBoolean("assistant_audio")||o.optBoolean("assistant_command"))continue;text=o.optString("text","");time=o.optString("saved_at","");recorded=o.optLong("recorded_at",recorded);}catch(JSONException e){continue; /* Keep other readable records; original malformed line and WAV remain untouched. */}}
    else{Matcher m=Pattern.compile("^\\[(\\d{2}:\\d{2}:\\d{2})\\] *(.*)$").matcher(raw);if(m.matches()){time=m.group(1);text=m.group(2);}}
    text=text.trim();while(!text.isEmpty()){int end=Math.min(text.length(),800);if(end<text.length()){int space=text.lastIndexOf(' ',end);if(space>400)end=space;}String part=text.substring(0,end).trim();if(!part.isEmpty())lines.add(new Line(++id,time,part,recorded));text=text.substring(end).trim();}
   }}return lines;

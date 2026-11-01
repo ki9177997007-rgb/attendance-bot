@@ -116,6 +116,7 @@ jobs:
             adb pull /data/local/tmp/main-font-1.0.png app/build/reports/androidTests/screenshots/
             adb pull /data/local/tmp/main-font-1.8.png app/build/reports/androidTests/screenshots/
             adb pull /data/local/tmp/recall-context.png app/build/reports/androidTests/screenshots/
+            for screen in settings-v13 tasks-v13 voice-v13 readiness-v13; do adb pull /data/local/tmp/$screen.png app/build/reports/androidTests/screenshots/; done
             adb logcat -d -s SpeechQuality:I > app/build/reports/androidTests/speech-quality.txt
       - uses: actions/upload-artifact@v4
         if: always()

@@ -12,7 +12,7 @@ import org.json.JSONObject;
 /** One-time setup; credentials never appear in reports or the APK. */
 public class ArchiveActivity extends Activity {
  private EditText endpoint,token;private TextView state;
- @Override public void onCreate(Bundle b){super.onCreate(b);LinearLayout page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);ScrollView scroll=new ScrollView(this);scroll.addView(page);setContentView(scroll);ScreenLayout.apply(this,page);
+ @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);LinearLayout page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);ScrollView scroll=new ScrollView(this);scroll.addView(page);setContentView(scroll);ScreenLayout.apply(this,page);
   TextView title=new TextView(this);title.setText("Архив для ChatGPT");title.setTextSize(23);page.addView(title);
   TextView help=new TextView(this);help.setText("Записи и расшифровки сначала сохраняются на телефоне. Передача начинается только после настройки приёмника. Подтверждение доставки не означает, что ChatGPT уже разобрал разговор.\n\nФайл подключения содержит личный ключ. Не пересылай его другим людям.");help.setTextSize(16);page.addView(help);
   endpoint=new EditText(this);endpoint.setHint("HTTPS-адрес приёмника /sync");endpoint.setSingleLine(true);endpoint.setSaveEnabled(false);page.addView(endpoint);

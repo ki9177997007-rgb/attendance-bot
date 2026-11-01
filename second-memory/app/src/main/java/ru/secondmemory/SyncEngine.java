@@ -11,6 +11,7 @@ final class SyncEngine {
         Context app=context.getApplicationContext();
         new Thread(()->run(app),"memory-sync").start();
     }
+    static void applyRemote(Context c,TaskDb db,String id,JSONObject remote){db.checked(id,remote.optBoolean("completed",false));TaskDb.Row current=db.get(id);if(current!=null&&current.completed){ReminderReceiver.schedule(c,id,0);c.getSystemService(android.app.NotificationManager.class).cancel(id,2);}}
     static void run(Context context) {
         if(!busy.compareAndSet(false,true))return;
         try(TaskDb db=new TaskDb(context)) {
@@ -29,7 +30,7 @@ final class SyncEngine {
                 if(Thread.currentThread().isInterrupted())return;
                 if(row.dirty){api.call("PUT","/api-v2/tasks/"+row.remote,new JSONObject().put("title",TaskRules.title(row.text)).put("description",YouGileApi.description(row)).put("completed",row.completed));db.clean(row);}
                 JSONObject remote=api.call("GET","/api-v2/tasks/"+row.remote,null);
-                db.checked(row.id,remote.optBoolean("completed",false));
+                applyRemote(context,db,row.id,remote);
                 Thread.sleep(350);
             }
             ReminderReceiver.restore(context);

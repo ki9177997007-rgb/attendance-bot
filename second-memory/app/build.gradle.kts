@@ -4,7 +4,7 @@ android {
  compileSdk = 35
  androidResources { noCompress += "onnx" }
  buildFeatures { buildConfig = true }
- defaultConfig { applicationId = "ru.secondmemory.assistant"; minSdk = 28; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"; targetSdk = 35; versionCode = 12; versionName = "0.12"; ndk { abiFilters += (project.findProperty("testAbi") as String? ?: "arm64-v8a") } }
+ defaultConfig { applicationId = "ru.secondmemory.assistant"; minSdk = 28; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"; targetSdk = 35; versionCode = 13; versionName = "0.13"; ndk { abiFilters += (project.findProperty("testAbi") as String? ?: "arm64-v8a") } }
  ndkVersion = "27.2.12479018"
  externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" } }
  compileOptions { sourceCompatibility = JavaVersion.VERSION_1_8; targetCompatibility = JavaVersion.VERSION_1_8 }

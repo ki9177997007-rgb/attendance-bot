@@ -31,8 +31,8 @@ public class AnalysisActivity extends Activity {
   search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int p,int c,int a){}public void onTextChanged(CharSequence s,int a,int b,int c){refresh();}public void afterTextChanged(Editable e){}});detailed.setOnCheckedChangeListener((v,c)->refresh());
   AiJob.schedule(this);refresh();if(getIntent().getBooleanExtra("prepare",false)&&b==null)begin();
  }
- private TextView label(String value,int size){TextView v=new TextView(this);v.setText(value);v.setTextSize(size);v.setTextColor(android.graphics.Color.rgb(20,31,51));v.setTextIsSelectable(true);v.setPadding(0,8,0,8);return v;}
- private void button(LinearLayout parent,String value,Runnable r){Button b=new Button(this);b.setText(value);b.setAllCaps(false);b.setMinHeight(Math.round(48*getResources().getDisplayMetrics().density));b.setOnClickListener(v->r.run());parent.addView(b);}
+ private TextView label(String value,int size){return Ui.label(this,value,size);}
+ private void button(LinearLayout parent,String value,Runnable r){Button b=new Button(this);b.setText(value);b.setAllCaps(false);b.setMinHeight(Math.round(48*getResources().getDisplayMetrics().density));b.setOnClickListener(v->r.run());Ui.buttonStyle(b,false);parent.addView(b);}
  private String period(){if(selected==null)return "Все разговоры";String prefix=selected.equals(LocalDate.now().minusDays(1))?"Вчера":selected.equals(LocalDate.now())?"Сегодня":"Разговоры";return prefix+" · "+selected.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));}
  private void select(LocalDate day){selected=day;refresh();}
  private void pickDate(){LocalDate day=selected==null?LocalDate.now():selected;new DatePickerDialog(this,(v,y,m,d)->select(LocalDate.of(y,m+1,d)),day.getYear(),day.getMonthValue()-1,day.getDayOfMonth()).show();}

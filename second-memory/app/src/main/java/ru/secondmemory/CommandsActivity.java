@@ -12,7 +12,7 @@ import org.json.*;
 public class CommandsActivity extends Activity {
  private LinearLayout page,pending;private EditText input;private TextView status;
  @Override public void onCreate(Bundle b){super.onCreate(b);ScrollView scroll=new ScrollView(this);page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);page.setPadding(24,24,24,24);page.setFitsSystemWindows(true);scroll.addView(page);setContentView(scroll);ScreenLayout.apply(this,page);
-  label("Команды телефона",24);label("Во время записи скажи: «Память, поставь будильник на 6:30». Затем открой уведомление и подтверди действие. Все голоса распознаются одинаково.\n\nЗдесь можно ввести команду без слова «Память». Примеры:\nТаймер на 20 минут\nОткрой Telegram\nНапомни завтра в 8:30 позвонить Олегу",16);
+  label("Команды телефона",24);label("Во время записи скажи: «Память, поставь будильник на 6:30». Затем открой уведомление и подтверди действие. Будильники, таймеры и приложения требуют подтверждения на этом экране.\n\nЗдесь можно ввести команду без слова «Память». Примеры:\nТаймер на 20 минут\nОткрой Telegram\nНапомни завтра в 8:30 позвонить Олегу",16);
   input=new EditText(this);input.setHint("Команда");page.addView(input);if(b!=null)input.setText(b.getString("input",""));
   button(page,"Выполнить команду",()->preview(input.getText().toString(),System.currentTimeMillis(),false));
   button(page,"Выбрать приложение",()->apps(null,()->{}));button(page,"Настроить уведомления и точные напоминания",()->startActivity(new Intent(this,SettingsActivity.class)));button(page,"Поручения и напоминания",()->startActivity(new Intent(this,TasksActivity.class)));
