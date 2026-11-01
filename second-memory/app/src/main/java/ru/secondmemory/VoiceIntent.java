@@ -6,7 +6,7 @@ final class VoiceIntent {
  final Kind kind; final String text; final int ordinal;
  VoiceIntent(Kind k,String t,int n){kind=k;text=t;ordinal=n;}
  static String body(String text){return TaskRules.normalize(text).replaceFirst("^(?:вторая память|память|помощник) +", "").replaceFirst("^пожалуйста +", "");}
- static int ordinal(String s){String[] names={"перв(?:ое|ую|ый|ый пункт)","втор(?:ое|ую|ой)","трет(?:ье|ью|ий)","четверт(?:ое|ую|ый)","пят(?:ое|ую|ый)"};for(int i=0;i<5;i++)if(s.matches(".*\\b(?:"+names[i]+"|"+(i+1)+")\\b.*"))return i;return -1;}
+ static int ordinal(String s){s=s.split("\\b(?:через|на|завтра|сегодня|в|к)\\b",2)[0];String[] names={"перв(?:ое|ую|ый|ый пункт)","втор(?:ое|ую|ой)","трет(?:ье|ью|ий)","четверт(?:ое|ую|ый)","пят(?:ое|ую|ый)"};for(int i=0;i<5;i++)if(s.matches(".*\\b(?:"+names[i]+"|"+(i+1)+")\\b.*"))return i;return -1;}
  static VoiceIntent parse(String raw){String s=body(raw);Kind k=Kind.UNKNOWN;int n=ordinal(s);
   if(s.matches(".*\\b(если|например|допустим)\\b.*")||s.startsWith("не "))return new VoiceIntent(k,s,n);
   if(s.matches("(?:что|че|чего) (?:мне )?(?:там )?(?:надо |нужно )?(?:сделать|делать)(?: дальше| сегодня)?")||s.matches("(?:мои (?:дела|задачи|поручения)|список (?:дел|задач)|что по задачам)"))k=Kind.LIST;
