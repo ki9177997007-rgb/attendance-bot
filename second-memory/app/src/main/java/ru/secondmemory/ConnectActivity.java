@@ -12,13 +12,12 @@ public class ConnectActivity extends Activity {
     private TextView status;
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
-        LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);l.setPadding(36,48,36,36);
-        status=new TextView(this);status.setText("Подключение YouGile\n\nВведи почту и пароль YouGile. Ключ будет получен автоматически — копировать его не нужно. Выбери свою компанию; отдельный проект «Вторая память» создаётся один раз.\n\nЕсли обычно входишь через Яндекс ID: здесь нужен пароль YouGile. Пароль Яндекса не вводи. Вход в установленное приложение не подключает синхронизацию автоматически.\n\nПередаются только поручения. Аудио и полная расшифровка остаются на телефоне. Пароль не сохраняется.");l.addView(status);
-        login=new EditText(this);login.setHint("Логин YouGile");login.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);l.addView(login);
-        password=new EditText(this);password.setHint("Пароль YouGile");password.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);l.addView(password);password.setSaveEnabled(false);password.setImportantForAutofill(android.view.View.IMPORTANT_FOR_AUTOFILL_NO);
-        connect=new Button(this);connect.setText("Войти и подключить");l.addView(connect);
-        Button later=new Button(this);later.setText("Позже — работать офлайн");later.setOnClickListener(v->finish());l.addView(later);
-        ScrollView scroll=new ScrollView(this);scroll.addView(l);setContentView(scroll);ScreenLayout.apply(this,l);
+        LinearLayout l=Ui.column(this);ScrollView scroll=new ScrollView(this);scroll.addView(l);setContentView(scroll);ScreenLayout.apply(this,l);Ui.title(l,"Подключить YouGile","Задачи из разговоров — на твоей доске");LinearLayout form=Ui.card(l);
+        status=Ui.label(this,"Введи логин и пароль YouGile. Приложение само создаст отдельный проект и подключит очередь задач.",16);form.addView(status);
+        login=new EditText(this);login.setHint("Логин YouGile");login.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);form.addView(login);
+        password=new EditText(this);password.setHint("Пароль YouGile");password.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);form.addView(password);password.setSaveEnabled(false);password.setImportantForAutofill(android.view.View.IMPORTANT_FOR_AUTOFILL_NO);
+        connect=Ui.button(form,"Войти и подключить",true,()->{});Ui.button(l,"Позже — работать офлайн",false,this::finish);
+        LinearLayout note=Ui.card(l);note.addView(Ui.label(this,"Пароль не сохраняется. Передаются только поручения; аудио и полные разговоры остаются на телефоне.\n\nЕсли входишь через Яндекс ID, здесь нужен отдельный пароль YouGile. Пароль Яндекса не вводи.",14));
         connect.setOnClickListener(v->companies());
     }
     private void companies() {
