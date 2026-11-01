@@ -8,6 +8,8 @@ import java.util.function.BooleanSupplier;
 /** One shared worker for scheduled and user-started analysis. Commits each batch before continuing. */
 final class AnalysisWork {
  static volatile Thread owner;
+ static void migratePreviousFailures(Context c)throws Exception{if(c.getSharedPreferences("ai",0).getInt("retry_revision",0)>=14)return;File[] dirs=new File(c.getFilesDir(),"sessions").listFiles(File::isDirectory);if(dirs!=null)for(File dir:dirs){JSONObject state=ConversationAnalysis.load(dir);if(state.optInt("failures",0)>0){state.put("failures",0).remove("error");ConversationAnalysis.save(dir,state);}}if(!c.getSharedPreferences("ai",0).edit().putInt("retry_revision",14).commit())throw new IOException("Не удалось сохранить подготовку анализа");}
+
  static boolean runPass(Context context,BooleanSupplier stop,File scope){boolean more=false;if(!AiJob.active.compareAndSet(false,true))return true;owner=Thread.currentThread();try{
    if(stop.getAsBoolean())return false;
    if(MemoryActivity.searching.get()||RecorderService.stopping||RecorderService.speechPending>2){AiJob.status="Жду завершения распознавания звука. Разговоры стоят в очереди.";more=true;return more;}

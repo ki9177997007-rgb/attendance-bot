@@ -37,7 +37,7 @@ final class ConversationAnalysis {
    String quote=source.text;
    if(item.has("quote")){String supplied=item.optString("quote").trim();if(supplied.length()<6||!source.text.contains(supplied))throw new JSONException("Цитата не совпадает с исходной репликой");}
    if(!owner.isEmpty()&&!quote.toLowerCase(Locale.ROOT).contains(owner.toLowerCase(Locale.ROOT)))owner="";
-   Set<String> allowedNumbers=new HashSet<>();Matcher sourceNumbers=Pattern.compile("\\d+").matcher(quote);while(sourceNumbers.find())allowedNumbers.add(sourceNumbers.group());Matcher numbers=Pattern.compile("\\d+").matcher(text);while(numbers.find())if(!allowedNumbers.contains(numbers.group()))throw new JSONException("В выводе появилась дата или число без источника");
+   Set<String> allowedNumbers=new HashSet<>();Matcher sourceNumbers=Pattern.compile("\\d+").matcher(quote+" "+DueParser.numbers(quote));while(sourceNumbers.find())allowedNumbers.add(sourceNumbers.group());Matcher numbers=Pattern.compile("\\d+").matcher(text);while(numbers.find())if(!allowedNumbers.contains(numbers.group()))throw new JSONException("В выводе появилась дата или число без источника");
    valid.put(new JSONObject().put("kind",kind).put("text",text).put("owner",owner).put("line",source.id).put("time",source.time).put("recorded",source.recorded).put("quote",quote));
   }return valid;
  }
