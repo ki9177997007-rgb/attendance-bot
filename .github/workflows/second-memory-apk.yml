@@ -2,7 +2,7 @@ name: Build Second Memory APK
 on:
   workflow_dispatch:
   push:
-    branches: [vtoraya-pamyat]
+    branches: [vtoraya-pamyat, codex/transcript-intake]
     paths:
       - 'second-memory/**'
       - '.github/workflows/second-memory-apk.yml'
@@ -14,6 +14,8 @@ jobs:
         working-directory: second-memory
     steps:
       - uses: actions/checkout@v4
+      - name: Check transcript intake contract
+        run: node --test integration/intake-validator.test.mjs
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

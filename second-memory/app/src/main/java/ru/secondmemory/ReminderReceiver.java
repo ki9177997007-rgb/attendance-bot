@@ -19,7 +19,7 @@ public class ReminderReceiver extends BroadcastReceiver {
    String id=i.getStringExtra("id");if(id==null)return;
    try(TaskDb db=new TaskDb(c)){TaskDb.Row r=db.get(id);if(r==null||r.completed)return;boolean done="DONE".equals(i.getAction());long due=done?r.due:System.currentTimeMillis()+10*60000L;db.edit(id,r.text,r.assignee,due,done);schedule(c,id,done?0:due);c.getSystemService(NotificationManager.class).cancel(id,2);}SyncEngine.kick(c);return;
   }
-  if(!"REMIND".equals(i.getAction())){restore(c);return;}
+  if(!"REMIND".equals(i.getAction())){restore(c);ArchiveJob.periodic(c);return;}
   String id=i.getStringExtra("id");if(id==null)return;
   try(TaskDb db=new TaskDb(c)){
    TaskDb.Row r=db.get(id);if(r==null||r.completed||r.notified||r.due<=0)return;
