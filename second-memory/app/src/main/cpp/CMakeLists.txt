@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 3.22.1)
+# Tensor kernels must be optimized even when Android packages a debuggable APK.
+# AGP otherwise configures Debug (-O0), making local inference impractically slow.
+set(CMAKE_BUILD_TYPE Release CACHE STRING "Native inference build type" FORCE)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 project(memory_ai LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(GGML_OPENMP OFF CACHE BOOL "" FORCE)
