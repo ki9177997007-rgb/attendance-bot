@@ -31,8 +31,8 @@ public class ReminderReceiver extends BroadcastReceiver {
    PendingIntent done=action(c,id,"DONE"),later=action(c,id,"SNOOZE");
    nm.notify(id,2,new Notification.Builder(c,"reminders").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle("Пора: "+r.text).setContentText(r.assignee.isEmpty()?"Открой список поручений":r.assignee).setStyle(new Notification.BigTextStyle().bigText(r.text)).setContentIntent(open).addAction(android.R.drawable.checkbox_on_background,"Выполнено",done).addAction(android.R.drawable.ic_lock_idle_alarm,"Через 10 минут",later).setAutoCancel(true).build());
    if(c.getSharedPreferences("voice",0).getBoolean("enabled",false)){
-    AssistantEngine.remember(c,new org.json.JSONArray().put(id),System.currentTimeMillis());String spoken="Напоминание. "+r.text;
-    if(RecorderService.running)VoiceOutput.speak(c,spoken);else try{c.startForegroundService(new Intent(c,ReminderVoiceService.class).putExtra("text",spoken));}catch(RuntimeException ignored){}
+    String spoken="Напоминание. "+r.text;
+    if(RecorderService.running)VoiceOutput.speakTasks(c,spoken,new org.json.JSONArray().put(id));else try{c.startForegroundService(new Intent(c,ReminderVoiceService.class).putExtra("text",spoken).putExtra("task_id",id));}catch(RuntimeException ignored){}
    }
    db.notified(id);
   }

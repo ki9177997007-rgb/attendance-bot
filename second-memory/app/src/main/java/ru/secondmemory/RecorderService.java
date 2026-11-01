@@ -65,6 +65,7 @@ public class RecorderService extends Service {
    if(queue!=null){for(File dir:queue.touched){try{ExportFiles.session(this,dir);}catch(IOException e){exported=" Текст остался в меню записей.";}}}
    if(session!=null)try{ExportFiles.session(this,session);}catch(IOException e){exported=" Текст остался в меню записей.";}
    if(!failed)message="Выключено. GigaAM v3: сохранено фраз "+phraseCount+". Аудио сохранено."+exported;
+   if(failed){NotificationManager nm=getSystemService(NotificationManager.class);nm.createNotificationChannel(new NotificationChannel("recording-errors","Проблемы записи",NotificationManager.IMPORTANCE_HIGH));PendingIntent open=PendingIntent.getActivity(this,9,new Intent(this,MainActivity.class),PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT);nm.notify(9,new Notification.Builder(this,"recording-errors").setSmallIcon(android.R.drawable.ic_dialog_alert).setContentTitle("Запись остановлена").setContentText(message).setStyle(new Notification.BigTextStyle().bigText(message)).setContentIntent(open).setAutoCancel(true).build());}
    SyncEngine.kick(this);main.post(()->{worker=null;running=false;stopping=false;speechPending=0;AiJob.schedule(this);ReminderReceiver.restore(this);stopForeground(STOP_FOREGROUND_REMOVE);stopSelf();});
   }
  }
