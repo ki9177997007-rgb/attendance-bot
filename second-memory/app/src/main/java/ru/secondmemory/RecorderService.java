@@ -33,7 +33,7 @@ public class RecorderService extends Service {
  }
  private void capture(boolean retry){AudioRecord microphone=null;WavWriter wav=null;NeuralSpeech speech=null;SpeechQueue queue=null;Vad vad=null;boolean failed=false;
   try{
-   speech=new NeuralSpeech(this);if(cancelled)return;queue=new SpeechQueue(this,speech);queue.recover();
+   VoiceOutput.init(this);speech=new NeuralSpeech(this);if(cancelled)return;queue=new SpeechQueue(this,speech);queue.recover();
    if(retry){message="Повторно распознаю сохранённые фрагменты: "+queue.pending.get();return;}
    sessionId=new SimpleDateFormat("yyyyMMdd_HHmmss_SSS",Locale.US).format(new Date());session=new File(getFilesDir(),"sessions/"+sessionId);if(!session.mkdirs())throw new IOException("Не удалось создать запись");
    vad=NeuralSpeech.detector(this);
@@ -49,7 +49,7 @@ public class RecorderService extends Service {
     float[] samples=NeuralSpeech.samples(buffer,n);double energy=0;for(float f:samples)energy+=f*f;micLevel=Math.min(100,(int)(Math.sqrt(energy/Math.max(1,samples.length))*327));
     vad.acceptWaveform(samples);drain(vad,queue,recorded);partial=vad.isSpeechDetected()?"GigaAM: слышу речь, жду короткую паузу…":queue.pending.get()>0?"GigaAM: обрабатываю фрагменты — "+queue.pending.get():"";
     if(!queue.error.isEmpty())message=queue.error;
-    if(SystemClock.elapsedRealtime()-lastSync>60000){lastSync=SystemClock.elapsedRealtime();SyncEngine.kick(this);}
+    if(SystemClock.elapsedRealtime()-lastSync>60000){lastSync=SystemClock.elapsedRealtime();SyncEngine.kick(this);queue.recover();}
     if(wav.size()>=16000*2*300){wav.close();wav=nextWav();}
    }
    vad.flush();drain(vad,queue,recorded);

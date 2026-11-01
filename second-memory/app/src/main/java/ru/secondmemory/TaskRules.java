@@ -17,5 +17,6 @@ final class TaskRules {
             if (n.matches("^[\\p{L}-]+ (пожалуйста )?(проверь|подготовь|отправь|позвони|собери|сделай|найди|уточни|сдай|получи|передай|оформи) .*" )) return true;
         return START.matcher(n).matches();
     }
+    static java.util.List<String> fragments(String text){java.util.List<String> out=new java.util.ArrayList<>();String[] parts=text.split("(?i)(?:[.!?;]+\\s*|,?\\s+(?:потом|затем|после этого)\\s+)");for(String part:parts){String cleaned=part.trim().replaceFirst("(?iu)^сначала\\s+","");if(candidate(cleaned))out.add(cleaned);}if(out.isEmpty()&&candidate(text))out.add(text);return out;}
     static String title(String text) { return text.length() > 180 ? text.substring(0,177)+"…" : text; }
 }

@@ -9,8 +9,11 @@
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
-<queries><intent><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent><intent><action android:name="android.speech.RecognitionService"/></intent></queries>
-<application android:usesCleartextTraffic="false" android:allowBackup="false" android:label="Вторая память 0.11" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+<queries><intent><action android:name="android.intent.action.TTS_SERVICE"/></intent><intent><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent><intent><action android:name="android.speech.RecognitionService"/></intent></queries>
+<application android:usesCleartextTraffic="false" android:allowBackup="false" android:label="Вторая память 0.12" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+<activity android:name=".VoiceSetupActivity" android:exported="false"/>
+<service android:name=".ReminderVoiceService" android:exported="false" android:foregroundServiceType="mediaPlayback"/>
 <activity android:name=".ArchiveActivity" android:exported="false"/>
 <service android:name=".ArchiveJob" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true"/>
 <activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>

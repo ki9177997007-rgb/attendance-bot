@@ -11,7 +11,10 @@ final class YouGileApi {
     YouGileApi(String key) { this(key,YouGileApi::http); }
     YouGileApi(String key,Transport transport) { this.key=key;this.transport=transport; }
     JSONObject call(String method,String path,JSONObject body) throws Exception { return transport.call(method,path,body,key); }
+    private static long lastRequest;
+    private static synchronized void pace()throws InterruptedException{long delay=1350-(System.nanoTime()/1000000L-lastRequest);if(delay>0)Thread.sleep(delay);lastRequest=System.nanoTime()/1000000L;}
     private static JSONObject http(String method,String path,JSONObject body,String key) throws Exception {
+        pace();
         if(!path.startsWith("/api-v2/"))throw new IOException("Недопустимый адрес API");
         HttpURLConnection connection=(HttpURLConnection)new URL("https://yougile.com"+path).openConnection();
         connection.setInstanceFollowRedirects(false);

@@ -258,3 +258,5 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Owner voice embedding model: WeSpeaker ResNet34-LM, VoxCeleb (pyannote/wespeaker-voxceleb-resnet34-LM), CC-BY-4.0. WeSpeaker authors and pyannote contributors. sherpa-onnx conversion by k2-fsa contributors. Source: https://huggingface.co/pyannote/wespeaker-voxceleb-resnet34-LM ; conversion: https://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-recongition-models . Model unchanged, SHA256 pinned in prepare_models.py. License: https://creativecommons.org/licenses/by/4.0/ .

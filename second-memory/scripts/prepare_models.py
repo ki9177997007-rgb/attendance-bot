@@ -28,6 +28,7 @@ from concurrent.futures import ThreadPoolExecutor
 revision = "0424d62637b37d8b7b1eb0f75a04d78dec55fdcc"
 model_base = "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-transducer-giga-am-v3-russian-2025-12-16/resolve/" + revision + "/"
 files = [
+    ("https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/wespeaker_en_voxceleb_resnet34_LM.onnx", assets / "speech/speaker.onnx", "e9848563da86f263117134dfd7ad63c92355b37de492b55e325400c9d9c39012"),
     (model_base + "encoder.int8.onnx", assets / "speech/encoder.int8.onnx", "0ec54e5f130a91c0f228d21795ede10b31c992a1f73e45dcd827e843a71a9b50"),
     (model_base + "decoder.onnx", assets / "speech/decoder.onnx", "5d1cfef155d8e07f213bd2f3229b5f6c5c29355c7fa5c1b9eb62cb1925725254"),
     (model_base + "joiner.onnx", assets / "speech/joiner.onnx", "fd1d02f45c2ad3d6b67cc149811ad794ab4b020ed49a0a9e2790a8619d1cddd8"),

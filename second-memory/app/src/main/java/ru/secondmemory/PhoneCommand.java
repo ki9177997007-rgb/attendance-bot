@@ -8,9 +8,9 @@ final class PhoneCommand {
  enum Kind { ALARM, TIMER, OPEN, REMINDER }
  final Kind kind; final String text, target; final long value;
  PhoneCommand(Kind k,String t,String x,long v){kind=k;text=t;target=x;value=v;}
- static boolean addressed(String text){return TaskRules.normalize(text).matches("^(?:память|вторая память) .+");}
+ static boolean addressed(String text){return TaskRules.normalize(text).matches("^(?:помощник|память|вторая память) .+");}
  static PhoneCommand parse(String text,long now,ZoneId zone){
-  String s=TaskRules.normalize(text).replaceFirst("^(?:вторая память|память) +","").replaceFirst("^пожалуйста +","");
+  String s=TaskRules.normalize(text).replaceFirst("^(?:вторая память|память|помощник) +","").replaceFirst("^пожалуйста +","");
   if(s.matches(".*\\b(например|если|допустим|отмени|отменить)\\b.*")||s.startsWith("не "))throw new IllegalArgumentException("Скажи одну прямую команду без отрицания и примеров.");
   if(s.matches("^(?:(?:поставь|установи|включи) )?таймер .+")){
    String duration=DueParser.numbers(s.replaceFirst("^(?:(?:поставь|установи|включи) )?таймер +","").replaceFirst("^(?:на|через) +",""));

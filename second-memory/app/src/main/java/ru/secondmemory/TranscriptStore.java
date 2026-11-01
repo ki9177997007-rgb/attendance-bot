@@ -14,8 +14,8 @@ final class TranscriptStore {
   data.remove("spk");data.remove("spk_frames");data.put("label","ВСЕ ГОЛОСА").put("priority",true).put("saved_at",time).put("recorded_at",recorded);
   String line=duplicate?"":"["+time+"] "+text+"\n";if(!duplicate){append(journal,data.toString()+"\n");append(new File(session,"transcript.txt"),line);}
   try{new ArchiveOutbox(c).enqueue(ArchiveEnvelope.from(sessionId,data,0));ArchiveJob.schedule(c);}catch(Exception e){c.getSharedPreferences("archive",0).edit().putString("last_error","Фрагмент сохранён в записи, очередь архива требует восстановления").apply();}
-  CommandQueue.offer(c,text,recorded);
-  try(TaskDb db=new TaskDb(c)){if(!PhoneCommand.addressed(text))db.offer(sessionId,text,true,recorded);}catch(RuntimeException e){append(new File(session,"task-errors.txt"),"Текст сохранён, ошибка очереди: "+e.getClass().getSimpleName()+"\n");}
+  boolean assistant=data.optBoolean("assistant_audio")||data.optBoolean("assistant_command");if(!assistant)CommandQueue.offer(c,text,recorded);
+  try(TaskDb db=new TaskDb(c)){if(!assistant&&!PhoneCommand.addressed(text)){for(String part:TaskRules.fragments(text))db.offer(sessionId,part,true,recorded);}}catch(RuntimeException e){append(new File(session,"task-errors.txt"),"Текст сохранён, ошибка очереди: "+e.getClass().getSimpleName()+"\n");}
   String recent=c.getSharedPreferences("display",0).getString("recent","")+line;if(recent.length()>6000)recent=recent.substring(recent.length()-6000);c.getSharedPreferences("display",0).edit().putString("recent",recent).apply();
   ReminderReceiver.restore(c);AiJob.schedule(c);return line;
  }

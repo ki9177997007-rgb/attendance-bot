@@ -7,8 +7,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 final class TaskDb extends SQLiteOpenHelper {
-    TaskDb(Context c) { super(c, "tasks.db", null, 2); }
+    TaskDb(Context c) { super(c, "tasks.db", null, 3); }
     public void onCreate(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE voice_receipts (id TEXT PRIMARY KEY)");
         db.execSQL("CREATE TABLE tasks (id TEXT PRIMARY KEY, session TEXT NOT NULL, text TEXT NOT NULL, priority INTEGER NOT NULL, created INTEGER NOT NULL, remote TEXT, company TEXT, completed INTEGER NOT NULL DEFAULT 0, checked INTEGER NOT NULL DEFAULT 0, due INTEGER NOT NULL DEFAULT 0, assignee TEXT NOT NULL DEFAULT '', notified INTEGER NOT NULL DEFAULT 0, analyzed INTEGER NOT NULL DEFAULT 0, dirty INTEGER NOT NULL DEFAULT 0)");
     }
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) { if(oldVersion<2){
@@ -17,7 +18,10 @@ final class TaskDb extends SQLiteOpenHelper {
  db.execSQL("ALTER TABLE tasks ADD COLUMN notified INTEGER NOT NULL DEFAULT 0");
  db.execSQL("ALTER TABLE tasks ADD COLUMN analyzed INTEGER NOT NULL DEFAULT 0");
  db.execSQL("ALTER TABLE tasks ADD COLUMN dirty INTEGER NOT NULL DEFAULT 0");
- } }
+ } if(oldVersion<3)db.execSQL("CREATE TABLE IF NOT EXISTS voice_receipts (id TEXT PRIMARY KEY)"); }
+    boolean received(String id){try(Cursor c=getReadableDatabase().rawQuery("SELECT id FROM voice_receipts WHERE id=?",new String[]{id})){return c.moveToFirst();}}
+    void receipt(String id){ContentValues v=new ContentValues();v.put("id",id);getWritableDatabase().insertWithOnConflict("voice_receipts",null,v,SQLiteDatabase.CONFLICT_IGNORE);}
+    void voiceReminder(String id,String text,long due){ContentValues v=new ContentValues();v.put("id",id);v.put("session","voice");v.put("text",text);v.put("priority",1);v.put("created",System.currentTimeMillis());v.put("due",due);v.put("analyzed",1);getWritableDatabase().insertWithOnConflict("tasks",null,v,SQLiteDatabase.CONFLICT_IGNORE);}
     String addReminder(String text,long due){String id=UUID.randomUUID().toString();ContentValues v=new ContentValues();v.put("id",id);v.put("session","manual");v.put("text",text);v.put("priority",1);v.put("created",System.currentTimeMillis());v.put("due",due);v.put("analyzed",1);getWritableDatabase().insertOrThrow("tasks",null,v);return id;}
     void offer(String session,String text,boolean priority){offer(session,text,priority,System.currentTimeMillis());}
     void offer(String session, String text, boolean priority,long recorded) {
