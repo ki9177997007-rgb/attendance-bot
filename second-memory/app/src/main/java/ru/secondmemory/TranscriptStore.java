@@ -17,7 +17,7 @@ final class TranscriptStore {
   boolean assistant=data.optBoolean("assistant_audio")||data.optBoolean("assistant_command");if(!assistant||(!data.optBoolean("assistant_audio")&&PhoneCommand.addressed(text)&&VoiceIntent.parse(text).kind==VoiceIntent.Kind.UNKNOWN))CommandQueue.offer(c,text,recorded);
   try(TaskDb db=new TaskDb(c)){if(!assistant&&!PhoneCommand.addressed(text)){for(String part:TaskRules.fragments(text))db.offer(sessionId,part,true,recorded);}}catch(RuntimeException e){append(new File(session,"task-errors.txt"),"Текст сохранён, ошибка очереди: "+e.getClass().getSimpleName()+"\n");}
   String recent=c.getSharedPreferences("display",0).getString("recent","")+line;if(recent.length()>6000)recent=recent.substring(recent.length()-6000);c.getSharedPreferences("display",0).edit().putString("recent",recent).apply();
-  ReminderReceiver.restore(c);AiJob.schedule(c);return line;
+  if(!assistant)c.getSharedPreferences("ai",0).edit().putBoolean("pending",true).apply();ReminderReceiver.restore(c);AiJob.schedule(c);return line;
  }
  private static void append(File f,String text)throws IOException{boolean separator=false;if(f.length()>0){try(RandomAccessFile check=new RandomAccessFile(f,"r")){check.seek(f.length()-1);separator=check.read()!=10;}}try(FileOutputStream out=new FileOutputStream(f,true)){if(separator)out.write(10);out.write(text.getBytes(StandardCharsets.UTF_8));out.getFD().sync();}}
 }

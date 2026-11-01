@@ -67,7 +67,7 @@ jobs:
 
   android-device-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     defaults:
       run:
         working-directory: second-memory
@@ -92,6 +92,7 @@ jobs:
           git -C vendor/llama.cpp fetch --depth 1 https://github.com/ggml-org/llama.cpp.git 74d4f5b041ad837153b0e90fc864b8290e01d8d5
           git -C vendor/llama.cpp checkout FETCH_HEAD
           python3 scripts/prepare_models.py
+          python3 scripts/prepare_analysis_test.py
           sudo apt-get update -qq
           sudo apt-get install -y espeak-ng ffmpeg
           mkdir -p app/src/androidTest/assets
@@ -109,14 +110,17 @@ jobs:
           arch: x86_64
           disable-animations: true
           ram-size: 3072
+          disk-size: 6000M
           working-directory: second-memory
           script: |
+            adb push /tmp/second-memory-qwen.gguf /data/local/tmp/second-memory-qwen.gguf
             gradle --no-daemon -PtestAbi=x86_64 connectedDebugAndroidTest
             mkdir -p app/build/reports/androidTests/screenshots
             adb pull /data/local/tmp/main-font-1.0.png app/build/reports/androidTests/screenshots/
             adb pull /data/local/tmp/main-font-1.8.png app/build/reports/androidTests/screenshots/
             adb pull /data/local/tmp/recall-context.png app/build/reports/androidTests/screenshots/
             for screen in settings-v13 tasks-v13 voice-v13 readiness-v13; do adb pull /data/local/tmp/$screen.png app/build/reports/androidTests/screenshots/; done
+            adb pull /data/local/tmp/analysis-v14-large.png app/build/reports/androidTests/screenshots/
             adb logcat -d -s SpeechQuality:I > app/build/reports/androidTests/speech-quality.txt
       - uses: actions/upload-artifact@v4
         if: always()
