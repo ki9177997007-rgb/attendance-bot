@@ -63,7 +63,7 @@ assert match, "Production recall answer prompt not found"
 # Validate the model's answer through the actual Android-independent Java guard.
 json_jar=pathlib.Path("native-test/json.jar")
 urllib.request.urlretrieve("https://repo.maven.apache.org/maven2/org/json/json/20240303/json-20240303.jar",json_jar)
-java_sources=["app/src/main/java/ru/secondmemory/"+name+".java" for name in ["ConversationAnalysis","MemorySearch","RecallWindow"]]
+java_sources=["app/src/main/java/ru/secondmemory/"+name+".java" for name in ["ConversationAnalysis","MemorySearch","RecallWindow","DueParser","TaskRules"]]
 subprocess.run(["javac","-cp",str(json_jar),"-d","native-test/recall-java",*java_sources,"scripts/RecallValidationCli.java"],check=True)
 for question,should_answer in [("Что говорили о пособии?",True),("Как зовут врача?",False)]:
  source="Что нужно вспомнить:\n"+question+"\nНайденные реплики:\n[1] Пособие пока не поступило на счёт.\n[2] Завтра ожидается доставка стульев.\n"
