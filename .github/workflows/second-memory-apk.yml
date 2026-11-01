@@ -109,12 +109,12 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
-          ram-size: 3072
+          ram-size: 4096
           disk-size: 6000M
           working-directory: second-memory
           script: |
             adb push /tmp/second-memory-qwen.gguf /data/local/tmp/second-memory-qwen.gguf
-            gradle --no-daemon -PtestAbi=x86_64 connectedDebugAndroidTest
+            sh scripts/run_android_tests.sh
             mkdir -p app/build/reports/androidTests/screenshots
             adb pull /data/local/tmp/main-font-1.0.png app/build/reports/androidTests/screenshots/
             adb pull /data/local/tmp/main-font-1.8.png app/build/reports/androidTests/screenshots/
