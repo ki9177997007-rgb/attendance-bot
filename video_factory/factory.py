@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Existing VideoFactory renderer: finance-niche edition. No automatic publication by default."""
-import argparse, json, os, pathlib, subprocess, urllib.request, uuid
+import argparse, json, os, pathlib, shutil, subprocess, urllib.request, uuid
 ROOT=pathlib.Path(__file__).resolve().parent
 SCENARIOS={
  "salary":{"title":"Куда исчезает зарплата?","slides":["ЗАРПЛАТА ПРИШЛА","А КУДА ОНА ИСЧЕЗЛА?","ПРОВЕРЬ 3 КАТЕГОРИИ","ДОСТАВКА • ТАКСИ • ПОДПИСКИ","ЗАПИШИ ТРАТЫ ЗА 7 ДНЕЙ"],"caption":"Куда исчезает зарплата? Начни с расходов за последние 7 дней. #бюджет #финансы #экономия"},
@@ -48,6 +48,16 @@ def render(out, scenario):
     silent=out.parent/"silent.mp4"
     run("ffmpeg","-y","-loglevel","error","-f","concat","-safe","0","-i",str(manifest),"-c","copy",str(silent))
     voice=os.getenv("VOICE_FILE","");music=os.getenv("MUSIC_FILE","")
+    if not voice and shutil.which("espeak-ng"):
+        narration={
+            "salary":"Зарплата исчезает незаметно? Проверь доставку, такси и подписки. Запиши расходы за семь дней.",
+            "subscriptions":"Проверь повторяющиеся списания. Найди забытые подписки и отмени те, которыми не пользуешься.",
+            "discount":"Скидка пятьдесят процентов? Сравни итоговую цену у других продавцов. Процент не гарантирует выгоду.",
+            "coffee":"Двести пятьдесят рублей двадцать раз это пять тысяч. Считай привычки, но решай сам, что важно."
+        }
+        generated=out.parent/"narration.wav"
+        run("espeak-ng","-v","ru","-s","175","-w",str(generated),narration[scenario])
+        voice=str(generated)
     args=["-i",str(silent)]
     if voice: args+=["-i",voice]
     if music: args+=["-i",music]
