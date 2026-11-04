@@ -9,7 +9,7 @@ def call(method,params):
     return result["response"]
 def upload(video,title,description):
     group=os.environ.get("VK_GROUP_ID")
-    args={"name":title,"description":description,"wallpost":"0"}
+    args={"name":title,"description":description,"wallpost":"1"}
     if group:args["group_id"]=group
     meta=call("video.save",args)
     url=meta["upload_url"]
