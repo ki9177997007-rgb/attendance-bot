@@ -11,6 +11,15 @@ on:
         description: 'Publish to Telegram after render (requires secrets)'
         type: boolean
         default: false
+      scenario:
+        description: 'Finance topic'
+        type: choice
+        options:
+          - salary
+          - subscriptions
+          - discount
+          - coffee
+        default: salary
       publish_vk:
         description: 'Upload video to VK community (requires VK_ACCESS_TOKEN)'
         type: boolean
@@ -32,18 +41,23 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PUBLISH: ${{ inputs.publish_telegram }}
+          SCENARIO: ${{ inputs.scenario || 'salary' }}
           REQUIRE_NEURAL_VOICE: ${{ (inputs.publish_telegram || inputs.publish_vk) && 'true' || 'false' }}
         run: |
           if [ "$PUBLISH" = "true" ]; then
-            python -m py_compile video_factory/factory.py && python video_factory/factory.py --scenario salary --out video_factory/out/video.mp4 --publish-telegram
+            python -m py_compile video_factory/factory.py && python video_factory/factory.py --scenario "$SCENARIO" --out video_factory/out/video.mp4 --publish-telegram
           else
-            python -m py_compile video_factory/factory.py && python video_factory/factory.py --scenario salary --out video_factory/out/video.mp4
+            python -m py_compile video_factory/factory.py && python video_factory/factory.py --scenario "$SCENARIO" --out video_factory/out/video.mp4
           fi
       - name: Validate rendered video
+        env:
+          PUBLISH_TG: ${{ inputs.publish_telegram }}
+          PUBLISH_VK: ${{ inputs.publish_vk }}
         run: |
           ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 video_factory/out/video.mp4
           test -s video_factory/out/metadata.json
           python -c 'import json; d=json.load(open("video_factory/out/metadata.json")); assert d["voice_engine"] in ("neural", "offline", "external"), d'
+          python -c 'import json,os; d=json.load(open("video_factory/out/metadata.json")); assert not (os.getenv("PUBLISH_TG")=="true" or os.getenv("PUBLISH_VK")=="true") or d["voice_engine"]=="neural"'
           ffprobe -v error -select_streams a -show_entries stream=codec_name -of default=noprint_wrappers=1 video_factory/out/video.mp4
           test -s video_factory/out/narration.mp3 || test -s video_factory/out/narration.wav
       - name: Upload to VK community (explicit opt-in only)
