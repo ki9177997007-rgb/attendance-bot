@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "community": "Подарочный переполох",
+  "community_id": 242557906,
+  "targets": [
+    {
+      "id": "vk",
+      "name": "VK Видео / Клипы",
+      "enabled": true,
+      "mode": "android_ui",
+      "verified": false
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube Shorts",
+      "enabled": true,
+      "mode": "android_ui",
+      "verified": false
+    },
+    {
+      "id": "tiktok",
+      "name": "TikTok",
+      "enabled": true,
+      "mode": "android_ui",
+      "verified": false
+    },
+    {
+      "id": "dzen",
+      "name": "Дзен",
+      "enabled": true,
+      "mode": "android_ui",
+      "verified": false
+    }
+  ],
+  "queue": {
+    "sequential_ui": true,
+    "avoid_duplicate_attempts": true,
+    "require_device_unlocked": true,
+    "never_interrupt_active_user": true,
+    "auto_submit": false
+  },
+  "notes": "Targets are planned only. No automatic publication is implemented or verified."
+}

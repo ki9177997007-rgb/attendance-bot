@@ -1,0 +1,23 @@
+{
+  "vk": {
+    "group_id": 242557906,
+    "community_url": "https://vk.com/club242557906",
+    "name": "Подарочный переполох",
+    "content_theme": [
+      "идеи подарков",
+      "необычные товары",
+      "полезные находки"
+    ],
+    "posting_enabled": false,
+    "verification_status": "community_id_from_user_not_api_verified"
+  },
+  "youtube": {
+    "posting_enabled": false
+  },
+  "tiktok": {
+    "posting_enabled": false
+  },
+  "dzen": {
+    "posting_enabled": false
+  }
+}

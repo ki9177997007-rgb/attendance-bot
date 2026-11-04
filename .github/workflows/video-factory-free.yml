@@ -1,0 +1,19 @@
+name: Free video factory test
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
+      - name: Render animated MP4
+        run: |
+          ffmpeg -y -f lavfi -i 'color=c=0x10131b:s=540x960:r=24:d=20' -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='VIDEO FACTORY FREE':fontsize=32:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2" -c:v libx264 -pix_fmt yuv420p -movflags +faststart demo.mp4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: demo-video
+          path: demo.mp4
