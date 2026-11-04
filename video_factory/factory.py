@@ -10,21 +10,41 @@ SCENARIOS={
 }
 def run(*args): subprocess.run(args,check=True)
 def render(out, scenario):
+    """Render kinetic-typography finance explainer with motion, progress and data graphics."""
     out=pathlib.Path(out);out.parent.mkdir(parents=True,exist_ok=True)
     font="/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
     if not pathlib.Path(font).exists(): raise FileNotFoundError("Install fonts-dejavu-core")
-    slides=SCENARIOS[scenario]["slides"]; parts=[]
+    slides=SCENARIOS[scenario]["slides"];parts=[]
     for i,line in enumerate(slides):
-        label=out.parent/("caption_%02d.txt"%i);label.write_text(line,encoding="utf-8")
+        label=out.parent/("caption_%02d.txt"%i)
+        label.write_text(line,encoding="utf-8")
         part=out.parent/("part_%02d.mp4"%i)
-        filt=("drawbox=x=0:y=0:w=iw:h=ih:color=0x0b1220:t=fill,"
-              "drawbox=x=0:y=0:w=iw*min(t/0.45\\,1):h=14:color=0x2dd4bf:t=fill,"
-              "drawbox=x=40:y=200+35*sin(t*2):w=460:h=300:color=0x0f766e@0.5:t=fill,"
-              "drawtext=fontfile="+font+":textfile="+str(label)+":fontsize=27:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2")
-        run("ffmpeg","-y","-loglevel","error","-f","lavfi","-i","color=c=0x0b1220:s=540x960:r=24:d=3","-vf",filt,"-c:v","libx264","-preset","veryfast","-pix_fmt","yuv420p",str(part))
+        # A moving grid, animated counter bars and scene-dependent chart elements.
+        # drawtext animation enters on the first half second of every scene.
+        filt=(
+          "format=yuv420p,"
+          "drawbox=x=0:y=0:w=iw:h=ih:color=0x09111f:t=fill,"
+          "drawgrid=w=54:h=54:t=1:c=0x233047@0.42,"
+          "drawbox=x=0:y=0:w=iw*min(t/3\\,1):h=12:color=0x2dd4bf:t=fill,"
+          "drawbox=x=36:y=140:w=468:h=680:color=0x10273c@0.92:t=fill,"
+          "drawbox=x=54:y=610:w=66:h=180*abs(sin(t*1.4+0.2)):color=0x2dd4bf@0.95:t=fill,"
+          "drawbox=x=140:y=610:w=66:h=180*abs(sin(t*1.4+1.4)):color=0x38bdf8@0.95:t=fill,"
+          "drawbox=x=226:y=610:w=66:h=180*abs(sin(t*1.4+2.6)):color=0xfbbf24@0.95:t=fill,"
+          "drawbox=x=312:y=610:w=66:h=180*abs(sin(t*1.4+3.8)):color=0xfb7185@0.95:t=fill,"
+          "drawbox=x=398:y=610:w=66:h=180*abs(sin(t*1.4+5.0)):color=0xa78bfa@0.95:t=fill,"
+          "drawtext=fontfile="+font+":textfile="+str(label)+
+          ":fontsize=26:fontcolor=white:box=1:boxcolor=0x09111f@0.65:boxborderw=14:"
+          "x=max(28\\,(w-text_w)/2):y=340+70*exp(-t*6),"
+          "drawtext=fontfile="+font+":text='ПОКУПАЙ ОСОЗНАННО':fontsize=19:fontcolor=0x2dd4bf:"
+          "x=(w-text_w)/2:y=845"
+        )
+        run("ffmpeg","-y","-loglevel","error","-f","lavfi","-i",
+            "color=c=0x09111f:s=540x960:r=24:d=3",
+            "-vf",filt,"-c:v","libx264","-preset","veryfast",
+            "-pix_fmt","yuv420p",str(part))
         parts.append(part)
     manifest=out.parent/"parts.txt"
-    manifest.write_text("".join("file '"+str(p.resolve())+"'\n" for p in parts),encoding="utf-8")
+    manifest.write_text("".join("file '"+str(p.resolve())+"'\\n" for p in parts),encoding="utf-8")
     silent=out.parent/"silent.mp4"
     run("ffmpeg","-y","-loglevel","error","-f","concat","-safe","0","-i",str(manifest),"-c","copy",str(silent))
     voice=os.getenv("VOICE_FILE","");music=os.getenv("MUSIC_FILE","")
@@ -38,7 +58,7 @@ def render(out, scenario):
         args+=["-f","lavfi","-i","anullsrc=channel_layout=stereo:sample_rate=44100"]
         mix=["-map","0:v","-map","1:a"]
     run("ffmpeg","-y","-loglevel","error",*args,*mix,"-c:v","copy","-c:a","aac","-b:a","160k","-t","15","-movflags","+faststart",str(out))
-    (out.parent/"metadata.json").write_text(json.dumps({"scenario":scenario,**SCENARIOS[scenario]},ensure_ascii=False,indent=2),encoding="utf-8")
+    (out.parent/"metadata.json").write_text(json.dumps({"scenario":scenario,**SCENARIOS[scenario],"voice_present":bool(voice),"music_present":bool(music)},ensure_ascii=False,indent=2),encoding="utf-8")
     print("Created",out)
 def send_telegram(file,caption):
     token=os.environ.get("TELEGRAM_BOT_TOKEN");chat=os.environ.get("TELEGRAM_CHAT_ID")
