@@ -44,7 +44,7 @@ def render(out, scenario):
             "-pix_fmt","yuv420p",str(part))
         parts.append(part)
     manifest=out.parent/"parts.txt"
-    manifest.write_text("".join("file '"+str(p.resolve())+"'\\n" for p in parts),encoding="utf-8")
+    manifest.write_text("".join("file '"+str(p.resolve())+"'\n" for p in parts),encoding="utf-8")
     silent=out.parent/"silent.mp4"
     run("ffmpeg","-y","-loglevel","error","-f","concat","-safe","0","-i",str(manifest),"-c","copy",str(silent))
     voice=os.getenv("VOICE_FILE","");music=os.getenv("MUSIC_FILE","")
