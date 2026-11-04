@@ -48,6 +48,7 @@ def render(out, scenario):
     silent=out.parent/"silent.mp4"
     run("ffmpeg","-y","-loglevel","error","-f","concat","-safe","0","-i",str(manifest),"-c","copy",str(silent))
     voice=os.getenv("VOICE_FILE","");music=os.getenv("MUSIC_FILE","")
+    voice_engine="external" if voice else "none"
     if not voice:
         narration={
             "salary":"Зарплата исчезает незаметно? Проверь доставку, такси и подписки. Запиши расходы за семь дней.",
@@ -65,6 +66,7 @@ def render(out, scenario):
                                 "--write-media",str(neural)],check=True,timeout=35)
                 if neural.is_file() and neural.stat().st_size>1024:
                     voice=str(neural)
+                    voice_engine="neural"
                     print("Voice engine: neural")
             except (subprocess.SubprocessError,OSError) as exc:
                 print("Neural speech unavailable, using offline fallback:",str(exc)[:200])
@@ -74,7 +76,10 @@ def render(out, scenario):
             generated=out.parent/"narration.wav"
             run("espeak-ng","-v","ru","-s","175","-w",str(generated),narration[scenario])
             voice=str(generated)
+            voice_engine="offline"
             print("Voice engine: offline fallback")
+    if os.getenv("REQUIRE_NEURAL_VOICE","false").lower()=="true" and voice_engine!="neural":
+        raise RuntimeError("Neural voice is required, but unavailable; refusing to publish robotic fallback")
     args=["-i",str(silent)]
     if voice: args+=["-i",voice]
     if music: args+=["-i",music]
@@ -85,7 +90,7 @@ def render(out, scenario):
         args+=["-f","lavfi","-i","anullsrc=channel_layout=stereo:sample_rate=44100"]
         mix=["-map","0:v","-map","1:a"]
     run("ffmpeg","-y","-loglevel","error",*args,*mix,"-c:v","copy","-c:a","aac","-b:a","160k","-t","15","-movflags","+faststart",str(out))
-    (out.parent/"metadata.json").write_text(json.dumps({"scenario":scenario,**SCENARIOS[scenario],"voice_present":bool(voice),"music_present":bool(music)},ensure_ascii=False,indent=2),encoding="utf-8")
+    (out.parent/"metadata.json").write_text(json.dumps({"scenario":scenario,**SCENARIOS[scenario],"voice_present":bool(voice),"voice_engine":voice_engine,"music_present":bool(music)},ensure_ascii=False,indent=2),encoding="utf-8")
     print("Created",out)
 def send_telegram(file,caption):
     token=os.environ.get("TELEGRAM_BOT_TOKEN");chat=os.environ.get("TELEGRAM_CHAT_ID")
