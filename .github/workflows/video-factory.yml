@@ -27,11 +27,11 @@ jobs:
           PUBLISH: ${{ inputs.publish_telegram }}
         run: |
           if [ "$PUBLISH" = "true" ]; then
-            python video_factory/factory.py --out video_factory/out/video.mp4 --publish-telegram
+            python -m py_compile video_factory/factory.py && python video_factory/factory.py --scenario salary --out video_factory/out/video.mp4 --publish-telegram
           else
-            python video_factory/factory.py --out video_factory/out/video.mp4
+            python -m py_compile video_factory/factory.py && python video_factory/factory.py --scenario salary --out video_factory/out/video.mp4
           fi
-      - name: Upload to VK community (explicit opt-in only)
+      - name: Validate rendered video\n        run: |\n          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 video_factory/out/video.mp4\n          test -s video_factory/out/metadata.json\n      - name: Upload to VK community (explicit opt-in only)
         if: ${{ inputs.publish_vk }}
         env:
           VK_ACCESS_TOKEN: ${{ secrets.VK_ACCESS_TOKEN }}
@@ -41,7 +41,7 @@ jobs:
             echo 'Missing VK_ACCESS_TOKEN GitHub Actions secret' >&2
             exit 1
           fi
-          python video_factory/vk_upload.py video_factory/out/video.mp4 "Подарочный переполох" "Идеи подарков и полезные находки"
+          python video_factory/vk_upload.py video_factory/out/video.mp4 "Подарочный переполох" "Личные финансы: бюджет, экономия и защита от переплат"
       - uses: actions/upload-artifact@v4
         with:
           name: free-video
