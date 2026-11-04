@@ -56,10 +56,21 @@ def render(out, scenario):
             "discount":"Скидка пятьдесят процентов? Сравни итоговую цену у других продавцов. Процент не гарантирует выгоду.",
             "coffee":"Двести пятьдесят рублей двадцать раз это пять тысяч. Считай привычки, но решай сам, что важно."
         }
-        # Prefer neural speech when the external service is reachable; offline fallback
-        # keeps the existing workflow functional without credentials.
+        # Piper runs neural speech locally; no websocket, token or cloud TTS needed.
+        piper_model=os.getenv("PIPER_MODEL","ru_RU-denis-medium")
+        if shutil.which("piper") and os.getenv("VOICE_ENGINE","auto")!="offline":
+            try:
+                generated=out.parent/"narration_piper.wav"
+                subprocess.run(["piper","--model",piper_model,"--output_file",str(generated)],
+                               input=narration[scenario],text=True,check=True,timeout=110)
+                if generated.is_file() and generated.stat().st_size>2048:
+                    voice=str(generated)
+                    voice_engine="neural"
+                    print("Voice engine: neural (local Piper)")
+            except (subprocess.SubprocessError,OSError) as exc:
+                print("Local Piper unavailable:",str(exc)[:200])
         neural=out.parent/"narration.mp3"
-        if shutil.which("edge-tts") and os.getenv("VOICE_ENGINE","auto")!="offline":
+        if not voice and shutil.which("edge-tts") and os.getenv("VOICE_ENGINE","auto")!="offline":
             try:
                 subprocess.run(["edge-tts","--voice","ru-RU-SvetlanaNeural",
                                 "--rate","+10%","--text",narration[scenario],
