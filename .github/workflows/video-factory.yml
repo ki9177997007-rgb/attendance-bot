@@ -32,6 +32,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PUBLISH: ${{ inputs.publish_telegram }}
+          REQUIRE_NEURAL_VOICE: ${{ (inputs.publish_telegram || inputs.publish_vk) && 'true' || 'false' }}
         run: |
           if [ "$PUBLISH" = "true" ]; then
             python -m py_compile video_factory/factory.py && python video_factory/factory.py --scenario salary --out video_factory/out/video.mp4 --publish-telegram
@@ -42,6 +43,7 @@ jobs:
         run: |
           ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 video_factory/out/video.mp4
           test -s video_factory/out/metadata.json
+          python -c 'import json; d=json.load(open("video_factory/out/metadata.json")); assert d["voice_engine"] in ("neural", "offline", "external"), d'
           ffprobe -v error -select_streams a -show_entries stream=codec_name -of default=noprint_wrappers=1 video_factory/out/video.mp4
           test -s video_factory/out/narration.mp3 || test -s video_factory/out/narration.wav
       - name: Upload to VK community (explicit opt-in only)
