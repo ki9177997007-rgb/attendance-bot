@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "default_policy": {
+    "auto_create": false,
+    "auto_publish": false,
+    "require_approval_for_new_community": true
+  },
+  "communities": [
+    {
+      "group_id": 242557906,
+      "name": "Подарочный переполох",
+      "description": "Идеи подарков, полезные находки и необычные товары. Подборки и вдохновение для любого повода.",
+      "type": "group",
+      "enabled": true,
+      "sync_profile": false,
+      "allow_creation": false,
+      "theme": "gifts",
+      "content_pillars": [
+        "идеи подарков",
+        "необычные товары",
+        "подборки",
+        "полезные находки"
+      ],
+      "branding": {
+        "avatar": "pending",
+        "cover": "pending"
+      },
+      "posting": {
+        "enabled": false,
+        "mode": "video",
+        "clips_verified": false
+      },
+      "monetization": {
+        "status": "not_verified"
+      }
+    }
+  ]
+}
