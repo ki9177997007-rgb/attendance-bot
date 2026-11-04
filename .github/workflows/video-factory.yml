@@ -1,5 +1,10 @@
 name: Free Video Factory
 on:
+  push:
+    branches: [video-factory-free]
+    paths:
+      - 'video_factory/**'
+      - '.github/workflows/video-factory.yml'
   workflow_dispatch:
     inputs:
       publish_telegram:
@@ -31,7 +36,11 @@ jobs:
           else
             python -m py_compile video_factory/factory.py && python video_factory/factory.py --scenario salary --out video_factory/out/video.mp4
           fi
-      - name: Validate rendered video\n        run: |\n          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 video_factory/out/video.mp4\n          test -s video_factory/out/metadata.json\n      - name: Upload to VK community (explicit opt-in only)
+      - name: Validate rendered video
+        run: |
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 video_factory/out/video.mp4
+          test -s video_factory/out/metadata.json
+      - name: Upload to VK community (explicit opt-in only)
         if: ${{ inputs.publish_vk }}
         env:
           VK_ACCESS_TOKEN: ${{ secrets.VK_ACCESS_TOKEN }}
