@@ -48,16 +48,33 @@ def render(out, scenario):
     silent=out.parent/"silent.mp4"
     run("ffmpeg","-y","-loglevel","error","-f","concat","-safe","0","-i",str(manifest),"-c","copy",str(silent))
     voice=os.getenv("VOICE_FILE","");music=os.getenv("MUSIC_FILE","")
-    if not voice and shutil.which("espeak-ng"):
+    if not voice:
         narration={
             "salary":"Зарплата исчезает незаметно? Проверь доставку, такси и подписки. Запиши расходы за семь дней.",
             "subscriptions":"Проверь повторяющиеся списания. Найди забытые подписки и отмени те, которыми не пользуешься.",
             "discount":"Скидка пятьдесят процентов? Сравни итоговую цену у других продавцов. Процент не гарантирует выгоду.",
             "coffee":"Двести пятьдесят рублей двадцать раз это пять тысяч. Считай привычки, но решай сам, что важно."
         }
-        generated=out.parent/"narration.wav"
-        run("espeak-ng","-v","ru","-s","175","-w",str(generated),narration[scenario])
-        voice=str(generated)
+        # Prefer neural speech when the external service is reachable; offline fallback
+        # keeps the existing workflow functional without credentials.
+        neural=out.parent/"narration.mp3"
+        if shutil.which("edge-tts") and os.getenv("VOICE_ENGINE","auto")!="offline":
+            try:
+                subprocess.run(["edge-tts","--voice","ru-RU-SvetlanaNeural",
+                                "--rate","+10%","--text",narration[scenario],
+                                "--write-media",str(neural)],check=True,timeout=35)
+                if neural.is_file() and neural.stat().st_size>1024:
+                    voice=str(neural)
+                    print("Voice engine: neural")
+            except (subprocess.SubprocessError,OSError) as exc:
+                print("Neural speech unavailable, using offline fallback:",str(exc)[:200])
+        if not voice:
+            if not shutil.which("espeak-ng"):
+                raise RuntimeError("No voice engine available: install edge-tts or espeak-ng")
+            generated=out.parent/"narration.wav"
+            run("espeak-ng","-v","ru","-s","175","-w",str(generated),narration[scenario])
+            voice=str(generated)
+            print("Voice engine: offline fallback")
     args=["-i",str(silent)]
     if voice: args+=["-i",voice]
     if music: args+=["-i",music]
