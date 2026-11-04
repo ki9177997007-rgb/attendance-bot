@@ -20,3 +20,14 @@ def upload(video,title,description):
     with urllib.request.urlopen(req,timeout=180) as r: answer=json.load(r)
     if answer.get("error"):raise RuntimeError("VK upload failed: "+str(answer))
     return "https://vk.com/video"+str(meta["owner_id"])+"_"+str(meta["video_id"])
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Upload a video to VK community via user token")
+    parser.add_argument("video")
+    parser.add_argument("title")
+    parser.add_argument("description")
+    args = parser.parse_args()
+    if not os.environ.get("VK_ACCESS_TOKEN"):
+        parser.error("VK_ACCESS_TOKEN is required")
+    print(upload(args.video, args.title, args.description))
