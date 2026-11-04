@@ -6,7 +6,10 @@ on:
         description: 'Publish to Telegram after render (requires secrets)'
         type: boolean
         default: false
-  # No automatic schedule until voice, music, persistence and accounts are ready.
+      publish_vk:
+        description: 'Upload video to VK community (requires VK_ACCESS_TOKEN)'
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -28,6 +31,17 @@ jobs:
           else
             python video_factory/factory.py --out video_factory/out/video.mp4
           fi
+      - name: Upload to VK community (explicit opt-in only)
+        if: ${{ inputs.publish_vk }}
+        env:
+          VK_ACCESS_TOKEN: ${{ secrets.VK_ACCESS_TOKEN }}
+          VK_GROUP_ID: '242557906'
+        run: |
+          if [ -z "$VK_ACCESS_TOKEN" ]; then
+            echo 'Missing VK_ACCESS_TOKEN GitHub Actions secret' >&2
+            exit 1
+          fi
+          python video_factory/vk_upload.py video_factory/out/video.mp4 "Подарочный переполох" "Идеи подарков и полезные находки"
       - uses: actions/upload-artifact@v4
         with:
           name: free-video
